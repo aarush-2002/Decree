@@ -4,6 +4,15 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    // Safety check for Prisma
+    if (!prisma) {
+      console.error('Prisma client not initialized - missing DATABASE_URL');
+      return NextResponse.json(
+        { error: 'Database not configured' }, 
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const {
       principal,
