@@ -20,6 +20,7 @@ model Organization {
 
 model User {
   id           String   @id @default(uuid())
+  clerkId      String?  @unique // <-- ADD THIS LINE
   orgId        String
   name         String
   email        String   @unique
