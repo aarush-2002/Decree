@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id           String   @id @default(uuid())
+  name         String
+  type         String   
+  udyamNumber  String?
+  createdAt    DateTime @default(now())
+  
+  users        User[]
+  clients      Client[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  orgId        String
+  name         String
+  email        String   @unique
+  phone        String?
+  role         String   
+  
+  organization Organization @relation(fields: [orgId], references: [id])
+}
+
+model Client {
+  id             String   @id @default(uuid())
+  managingOrgId  String
+  name           String
+  udyamNumber    String?
+  gstin          String?
+  
+  managingOrg    Organization @relation(fields: [managingOrgId], references: [id])
+  invoices       Invoice[]
+}
+
+model Buyer {
+  id          String    @id @default(uuid())
+  name        String
+  gstin       String?
+  entityType  String    
+  
+  invoices    Invoice[]
+}
+
+model Invoice {
+  id                   String    @id @default(uuid())
+  clientId             String
+  buyerId              String
+  invoiceNumber        String
+  invoiceDate          DateTime
+  amount               Float
+  deliveryDate         DateTime
+  deemedAcceptanceDate DateTime?
+  dueDate              DateTime
+  status               String    
+  extractedByAi        Boolean   @default(false)
+  
+  client      Client   @relation(fields: [clientId], references: [id])
+  buyer       Buyer    @relation(fields: [buyerId], references: [id])
+  documents   Document[]
+  case        Case?
+}
+
+model Document {
+  id                String   @id @default(uuid())
+  invoiceId         String
+  fileUrl           String
+  fileType          String
+  uploadStatus      String   
+  extractionStatus  String   
+  
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+}
+
+model Case {
+  id                  String    @id @default(uuid())
+  invoiceId           String    @unique
+  state               String    
+  filedAt             DateTime  @default(now())
+  currentDeadlineAt   DateTime?
+  interestAccrued     Float     @default(0)
+  principalAmount     Float
+  
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id])
+  events       CaseEvent[]
+  reminders    Reminder[]
+}
+
+model CaseEvent {
+  id          String   @id @default(uuid())
+  caseId      String
+  fromState   String?
+  toState     String
+  occurredAt  DateTime @default(now())
+  note        String?
+  
+  case Case @relation(fields: [caseId], references: [id])
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  caseId    String
+  dueAt     DateTime
+  channel   String   
+  sentAt    DateTime?
+  
+  case Case @relation(fields: [caseId], references: [id])
+}
+
+model RbiRateHistory {
+  id              String   @id @default(uuid())
+  effectiveFrom   DateTime @unique
+  bankRatePercent Float
+}
