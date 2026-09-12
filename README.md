@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚖️ Decree: The Evidence-to-Claim Layer for MSMEs
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?style=for-the-badge&logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?style=for-the-badge&logo=postgresql)
 
-First, run the development server:
+> Decree converts messy commercial evidence into an auditable, evidence-backed, continuously tracked delayed-payment claim. It is the **pre-filing intelligence layer** for India's MSME ecosystem.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚨 The Problem & Differentiation (vs. SAMADHAAN)
+The Government of India already provides **MSME SAMADHAAN** for filing and monitoring delayed payments. So why Decree? 
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+SAMADHAAN is a *filing portal*. It assumes the user already has a perfectly organized, legally sound claim package. In reality, MSMEs struggle with:
+1. **Messy Evidence**: Invoices are blurry, multi-page, or lack explicit acceptance dates.
+2. **Complex Math**: Calculating exact penal interest (3× RBI rate) under Section 16 of the MSMED Act, 2006, across month boundaries and partial payments is error-prone.
+3. **Missing Documentation**: Filing gets rejected because delivery proof or Udyam registration is missing.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Decree's Value Proposition**: We do not replace SAMADHAAN. We are the **pre-filing intelligence engine** that ingests messy documents, extracts and validates evidence, deterministically calculates legal eligibility, flags missing evidence, and generates a court-ready claim package *before* the user ever touches the government portal.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🏗️ System Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```mermaid
+graph TD
+    A[User Uploads Invoice PDF/Image] --> B(Uploadthing Secure Storage)
+    B --> C{Next.js API Route}
+    C -->|Auth Check| D[Clerk Authentication]
+    C -->|Tenant Scope| E[Prisma ORM]
+    E --> F[(Neon PostgreSQL)]
+    C --> G[Deterministic Rules Engine]
+    G -->|MSMED Act Sec 15-24 Logic| H[Interest & Eligibility Calculator]
+    H --> I[@react-pdf/renderer]
+    I --> J[Downloadable Filing Packet PDF]
