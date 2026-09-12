@@ -1,113 +1,146 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';  // ← THIS LINE IS MISSING OR BROKEN
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
-import { BrutalButton } from '@/components/ui/BrutalButton';
+// ... rest of imports
 import { BrutalCard } from '@/components/ui/BrutalCard';
-import { BrutalBadge } from '@/components/ui/BrutalBadge';
-import { PageTransition } from '@/components/ui/PageTransition';
-import { Plus, Loader2 } from 'lucide-react';
+import { BrutalButton } from '@/components/ui/BrutalButton';
+import Link from 'next/link';
+import { Plus, FileText, Scale, Clock, TrendingUp } from 'lucide-react';
+
+// Force this page to be dynamic (no SSR)
+export const dynamic = 'force-dynamic';
+
+interface Case {
+  id: string;
+  client: string;
+  buyer: string;
+  amount: string;
+  status: string;
+  daysOverdue: number;
+}
 
 export default function DashboardPage() {
-  const [cases, setCases] = useState<any[]>([]);
+  const router = useRouter();
+  const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
-  // Fetch real data from our backend API
-  useEffect(() => {
-    const fetchCases = async () => {
-      try {
-        const res = await fetch('/api/cases');
-        const data = await res.json();
-        setCases(data);
-      } catch (error) {
-        console.error('Error fetching cases:', error);
-      } finally {
+    useEffect(() => {
+    setIsClient(true);
+    fetch('/api/cases')
+      .then(res => res.json())
+      .then(data => {
+        // CRITICAL FIX: Check if data is actually an array before using it
+        if (Array.isArray(data)) {
+          setCases(data);
+        } else {
+          console.log("API returned non-array data (maybe not logged in?):", data);
+          setCases([]); // Fallback to empty list so it doesn't crash
+        }
         setLoading(false);
-      }
-    };
-
-    fetchCases();
+      })
+      .catch(err => {
+        console.error('Failed to fetch cases:', err);
+        setCases([]); // Fallback to empty list
+        setLoading(false);
+      });
   }, []);
+  // Don't render anything until client is mounted
+  if (!isClient) {
+    return (
+      <main className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
+        <div className="text-center">
+          <Clock className="w-12 h-12 mx-auto mb-4 animate-spin text-[#ffb020]" />
+          <p className="font-mono">Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <PageTransition>
-        <Navbar />
-        
-        {/* Stats Section */}
-        <section className="border-b-4 border-black bg-white">
-          <div className="container mx-auto px-6 py-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <BrutalCard variant="amber">
-                <div className="text-sm font-mono font-bold uppercase text-gray-600 mb-2">Total Recoverable</div>
-                <div className="text-5xl font-black text-primary font-mono">Rs. 18.8L</div>
-              </BrutalCard>
-              <BrutalCard variant="teal">
-                <div className="text-sm font-mono font-bold uppercase text-gray-600 mb-2">Active Cases</div>
-                <div className="text-5xl font-black text-secondary font-mono">{cases.length}</div>
-              </BrutalCard>
-              <BrutalCard variant="default">
-                <div className="text-sm font-mono font-bold uppercase text-gray-600 mb-2">Resolved</div>
-                <div className="text-5xl font-black font-mono">6</div>
-              </BrutalCard>
-              <BrutalCard variant="error">
-                <div className="text-sm font-mono font-bold uppercase text-gray-600 mb-2">Overdue</div>
-                <div className="text-5xl font-black text-destructive font-mono">3</div>
-              </BrutalCard>
-            </div>
+    <main className="min-h-screen bg-[#1a1a1a] text-white">
+      <Navbar />
+      <div className="container mx-auto px-6 py-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
+          <div>
+            <h1 className="text-5xl font-black font-display tracking-tight uppercase">Your Cases</h1>
+            <p className="font-mono text-gray-400 mt-2">Track and manage your delayed payment claims</p>
           </div>
-        </section>
+          <Link href="/upload">
+            <BrutalButton variant="primary" size="lg">
+              <Plus className="w-5 h-5 mr-2" /> New Case
+            </BrutalButton>
+          </Link>
+        </div>
 
-        {/* Table Section */}
-        <section className="container mx-auto px-6 py-12">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-4xl font-black font-display tracking-tight">ACTIVE CASES</h2>
-            <BrutalButton variant="primary" size="md"><Plus className="w-5 h-5 mr-2" /> New Case</BrutalButton>
+        {loading ? (
+          <div className="text-center py-20 font-mono text-gray-400">
+            <Clock className="w-12 h-12 mx-auto mb-4 animate-spin" />
+            Loading cases...
           </div>
-
-          <div className="bg-white border-4 border-black shadow-brutal overflow-x-auto">
-            <div className="bg-base text-white border-b-4 border-black">
-              <div className="grid grid-cols-12 gap-4 px-6 py-4 font-mono font-bold text-sm uppercase min-w-[800px]">
-                <div className="col-span-2">Case ID</div>
-                <div className="col-span-3">Client</div>
-                <div className="col-span-2">Buyer</div>
-                <div className="col-span-2">Amount</div>
-                <div className="col-span-1">Status</div>
-                <div className="col-span-2">Days</div>
-              </div>
-            </div>
-
-            <div className="divide-y-2 divide-black">
-              {loading ? (
-                <div className="p-12 text-center font-mono font-bold">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-                  Fetching from Neon Database...
+        ) : cases.length === 0 ? (
+          <BrutalCard variant="default" className="p-12 text-center">
+            <FileText className="w-16 h-16 mx-auto mb-6 text-gray-600" />
+            <h2 className="text-3xl font-black font-display uppercase mb-4">No Cases Yet</h2>
+            <p className="font-mono text-gray-400 mb-8 max-w-md mx-auto">
+              Upload your first invoice to start tracking a delayed payment claim
+            </p>
+            <Link href="/upload">
+              <BrutalButton variant="primary" size="xl">
+                Upload Invoice
+              </BrutalButton>
+            </Link>
+          </BrutalCard>
+        ) : (
+          <div className="space-y-6">
+            {cases.map((caseItem) => (
+              <BrutalCard key={caseItem.id} variant="default" className="p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Scale className="w-6 h-6 text-[#ffb020]" />
+                      <h3 className="text-2xl font-black font-display uppercase">
+                        {caseItem.id}
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-sm">
+                      <div>
+                        <span className="text-gray-500">Client:</span>
+                        <span className="ml-2 text-white">{caseItem.client}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Buyer:</span>
+                        <span className="ml-2 text-white">{caseItem.buyer}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Amount:</span>
+                        <span className="ml-2 text-[#ffb020] font-bold">₹{parseInt(caseItem.amount).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-3">
+                    <div className="inline-block px-4 py-2 bg-[#ffb020] text-black font-black font-mono uppercase">
+                      {caseItem.status}
+                    </div>
+                    <div className="flex items-center gap-2 text-destructive font-mono">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{caseItem.daysOverdue} days overdue</span>
+                    </div>
+                    <Link href={`/case/${caseItem.id}`}>
+                      <BrutalButton variant="outline" size="sm">
+                        View Details
+                      </BrutalButton>
+                    </Link>
+                  </div>
                 </div>
-              ) : cases.length === 0 ? (
-                <div className="p-12 text-center font-mono font-bold text-gray-500">
-                  No cases found. Run the seed script!
-                </div>
-              ) : (
-                cases.map((c) => (
-                  <Link 
-                    href={`/case/${c.id}`} 
-                    key={c.id} 
-                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center font-mono hover:bg-gray-50 border-l-8 border-l-primary transition-colors cursor-pointer min-w-[800px]"
-                  >
-                    <div className="col-span-2 font-bold">{c.id}</div>
-                    <div className="col-span-3 font-bold">{c.client}</div>
-                    <div className="col-span-2">{c.buyer}</div>
-                    <div className="col-span-2 font-bold">Rs. {(c.amount/1000).toFixed(0)}K</div>
-                    <div className="col-span-1"><BrutalBadge status={c.status as any} /></div>
-                    <div className="col-span-2 font-bold text-red-600">{c.daysOverdue} days</div>
-                  </Link>
-                ))
-              )}
-            </div>
+              </BrutalCard>
+            ))}
           </div>
-        </section>
-      </PageTransition>
+        )}
+      </div>
     </main>
   );
 }

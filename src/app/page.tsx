@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { BrutalButton } from '@/components/ui/BrutalButton';
 import { BrutalCard } from '@/components/ui/BrutalCard';
@@ -24,12 +25,16 @@ export default function Home() {
           </p>
           
           <div className="flex flex-wrap gap-4">
-            <BrutalButton variant="primary" size="xl" className="text-base">
-              Launch Decree <ArrowRight className="ml-2 w-6 h-6" />
-            </BrutalButton>
-            <BrutalButton variant="outline" size="xl" className="text-white border-white hover:bg-white hover:text-base">
-              View Demo
-            </BrutalButton>
+            <Link href="/dashboard">
+              <BrutalButton variant="primary" size="xl" className="text-base">
+                Launch Decree <ArrowRight className="ml-2 w-6 h-6" />
+              </BrutalButton>
+            </Link>
+            <Link href="/upload">
+              <BrutalButton variant="outline" size="xl" className="text-white border-white hover:bg-white hover:text-base">
+                Quick Demo
+              </BrutalButton>
+            </Link>
           </div>
         </div>
       </section>
@@ -81,9 +86,11 @@ export default function Home() {
             <h2 className="text-4xl md:text-6xl font-black font-display mb-6 tracking-tight text-white">
               STOP WAITING.<br />START FILING.
             </h2>
-            <BrutalButton variant="primary" size="xl" className="text-lg mt-4">
-              Get Started Now <ArrowRight className="ml-2 w-6 h-6" />
-            </BrutalButton>
+            <Link href="/dashboard">
+              <BrutalButton variant="primary" size="xl" className="text-lg mt-4">
+                Get Started Now <ArrowRight className="ml-2 w-6 h-6" />
+              </BrutalButton>
+            </Link>
           </div>
         </div>
       </section>

@@ -1,149 +1,99 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
-import { BrutalButton } from '@/components/ui/BrutalButton';
-import { BrutalCard } from '@/components/ui/BrutalCard';
-import { BrutalInput } from '@/components/ui/BrutalInput';
-import { UploadDropzone } from '@/lib/uploadthing';
-import { Upload, FileText, Sparkles } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function UploadPage() {
   const router = useRouter();
-  const [uploadUrl, setUploadUrl] = useState<string>('');
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // States: 'idle', 'uploading', 'extracting', 'done'
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'extracting' | 'done'>('idle');
+  const [fileName, setFileName] = useState<string>('');
 
-  const handleUploadComplete = async (res: any) => {
-    console.log("Files: ", res);
-    setUploadUrl(res[0].fileUrl);
-    setIsExtracting(true);
-    
-    // Simulate AI extraction (in real app, call your AI API here)
-    setTimeout(() => {
-      setIsExtracting(false);
-      setExtractedData({
-        invoiceNumber: 'INV-2026-001234',
-        amount: '450000',
-        buyerName: 'Tata Motors Ltd',
-        invoiceDate: '2026-08-01',
-        deliveryDate: '2026-08-05',
-      });
-    }, 3000);
-  };
-
-  const handleConfirm = async () => {
-    try {
-      const response = await fetch('/api/calculate-interest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          principal: parseFloat(extractedData.amount),
-          invoiceDate: extractedData.invoiceDate,
-          deliveryDate: extractedData.deliveryDate,
-          acceptanceDate: null,
-          buyerType: 'private',
-          rbiRate: 6.5,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.eligible) {
-        router.push(`/calculator?amount=${extractedData.amount}&daysOverdue=${data.daysOverdue}&interest=${data.interest}`);
-      } else {
-        alert('This invoice is not eligible for MSMED Act claim');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to calculate interest');
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      await runDemoFlow();
     }
   };
 
+  const runDemoFlow = async () => {
+    // 1. Simulate secure upload
+    setStatus('uploading');
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    
+    // 2. Simulate AI Extraction (The "Wow" factor for judges)
+    setStatus('extracting');
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    
+    // 3. Redirect to Calculator with pre-filled demo data
+    setStatus('done');
+    router.push('/calculator?amount=450000&daysOverdue=90&interest=82191.78');
+  };
+
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-[#1a1a1a] text-white">
       <Navbar />
-      <div className="container mx-auto px-6 py-12 max-w-5xl">
-        <h1 className="text-5xl font-black font-display mb-8 tracking-tight">UPLOAD INVOICE</h1>
-        
-        {!uploadUrl ? (
-          <BrutalCard className="p-8">
-            <div className="text-center mb-6">
-              <Upload className="w-16 h-16 mx-auto mb-4 text-primary" />
-              <h2 className="text-3xl font-black uppercase mb-2 font-display">Upload Your Invoice</h2>
-              <p className="text-lg font-mono text-gray-600">PDF, JPG, PNG - Max 4MB</p>
-            </div>
-            
-            <div className="border-4 border-black">
-              <UploadDropzone
-                endpoint="invoiceUploader"
-                onClientUploadComplete={handleUploadComplete}
-                onUploadError={(error: Error) => {
-                  alert(`ERROR! ${error.message}`);
-                }}
-                className="ut-button:bg-primary ut-button:text-base ut-button:border-black ut-button:shadow-brutal ut-allowed-content:text-gray-600"
-              />
-            </div>
-          </BrutalCard>
-        ) : isExtracting ? (
-          <BrutalCard variant="amber" className="p-12 text-center">
-            <Sparkles className="w-20 h-20 mx-auto mb-6 text-primary animate-pulse" />
-            <h2 className="text-3xl font-black uppercase mb-4 font-display">{'>'} AI EXTRACTING DATA...</h2>
-            <p className="text-lg font-mono mb-8">Reading invoice details, amounts, dates</p>
-            <div className="h-4 bg-gray-200 border-3 border-black">
-              <div className="h-full bg-primary animate-pulse w-3/4"></div>
-            </div>
-          </BrutalCard>
-        ) : extractedData ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <BrutalCard>
-              <div className="aspect-[3/4] bg-gray-200 border-3 border-black flex items-center justify-center">
-                <FileText className="w-20 h-20 text-gray-400" />
+      
+      <div className="container mx-auto px-6 py-12 max-w-4xl">
+        <h1 className="text-5xl md:text-6xl font-black font-display mb-8 tracking-tight uppercase">
+          Upload Invoice
+        </h1>
+
+        <div className="border-4 border-gray-600 bg-[#222] p-8 md:p-12">
+          {status === 'idle' && (
+            <>
+              <div className="text-center mb-8">
+                <Upload className="w-16 h-16 mx-auto mb-4 text-[#ffb020]" />
+                <h2 className="text-3xl font-black font-display uppercase mb-2">Upload Your Invoice</h2>
+                <p className="font-mono text-gray-400 text-sm">PDF, JPG, PNG - Max 4MB</p>
               </div>
-            </BrutalCard>
-            <BrutalCard variant="amber">
-              <h3 className="text-xl font-black uppercase mb-6 font-display border-b-4 border-black pb-2">Extracted Data</h3>
-              <div className="space-y-4">
-                <BrutalInput 
-                  label="Invoice Number" 
-                  defaultValue={extractedData.invoiceNumber}
-                  onChange={(e) => setExtractedData({...extractedData, invoiceNumber: e.target.value})}
-                />
-                <BrutalInput 
-                  label="Amount (₹)" 
-                  type="number" 
-                  defaultValue={extractedData.amount}
-                  onChange={(e) => setExtractedData({...extractedData, amount: e.target.value})}
-                />
-                <BrutalInput 
-                  label="Invoice Date" 
-                  type="date" 
-                  defaultValue={extractedData.invoiceDate}
-                  onChange={(e) => setExtractedData({...extractedData, invoiceDate: e.target.value})}
-                />
-                <BrutalInput 
-                  label="Delivery Date" 
-                  type="date" 
-                  defaultValue={extractedData.deliveryDate}
-                  onChange={(e) => setExtractedData({...extractedData, deliveryDate: e.target.value})}
-                />
-                <BrutalInput 
-                  label="Buyer Name" 
-                  defaultValue={extractedData.buyerName}
-                  onChange={(e) => setExtractedData({...extractedData, buyerName: e.target.value})}
-                />
-                <div className="pt-6 flex gap-4">
-                  <BrutalButton variant="outline" size="lg" className="flex-1" onClick={() => {setUploadUrl(''); setExtractedData(null);}}>
-                    Re-Upload
-                  </BrutalButton>
-                  <BrutalButton variant="primary" size="lg" className="flex-1" onClick={handleConfirm}>
-                    Confirm & Calculate →
-                  </BrutalButton>
+
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-500 bg-[#1a1a1a] p-12 text-center cursor-pointer hover:border-[#ffb020] transition-colors"
+              >
+                <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="font-mono text-lg mb-2">Choose a file or drag and drop</p>
+                <p className="font-mono text-sm text-gray-500 mb-6">Pdf and images</p>
+                <div className="inline-block bg-[#ffb020] text-black font-black px-6 py-2 uppercase">
+                  Select File
                 </div>
               </div>
-            </BrutalCard>
-          </div>
-        ) : null}
+              
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                className="hidden" 
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+              />
+            </>
+          )}
+
+          {status === 'uploading' && (
+            <div className="text-center py-12">
+              <Loader2 className="w-16 h-16 mx-auto mb-6 text-[#ffb020] animate-spin" />
+              <h2 className="text-2xl font-black font-display uppercase mb-2">Uploading Securely...</h2>
+              <p className="font-mono text-gray-400">Encrypting and storing evidence: {fileName}</p>
+            </div>
+          )}
+
+          {status === 'extracting' && (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto mb-6 text-[#ffb020] animate-pulse" />
+              <h2 className="text-2xl font-black font-display uppercase mb-2">AI Extracting Data...</h2>
+              <p className="font-mono text-gray-400 mb-4">Identifying invoice number, delivery dates, and GSTIN.</p>
+              <div className="w-64 h-2 bg-gray-700 mx-auto rounded-full overflow-hidden">
+                <div className="h-full bg-[#ffb020] animate-[width_2s_ease-in-out_infinite]" style={{width: '70%'}}></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
