@@ -1,14 +1,16 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { BrutalCard } from '@/components/ui/BrutalCard';
 import { BrutalButton } from '@/components/ui/BrutalButton';
 import { PageTransition } from '@/components/ui/PageTransition';
-import { Scale, Calculator, ArrowRight, FileText } from 'lucide-react';
+import { Scale, ArrowRight, FileText } from 'lucide-react';
 import Link from 'next/link';
 
-export default function CalculatorPage() {
+// 1. Move the logic that uses useSearchParams into a child component
+function CalculatorContent() {
   const searchParams = useSearchParams();
   const amount = searchParams.get('amount') || '450000';
   const daysOverdue = searchParams.get('daysOverdue') || '90';
@@ -104,8 +106,8 @@ export default function CalculatorPage() {
               </BrutalButton>
             </Link>
           </div>
-        </div>
-                  {/* Legal Disclaimer */}
+
+          {/* Legal Disclaimer */}
           <div className="mt-8 p-4 bg-gray-200 border-3 border-black text-xs font-mono text-gray-700">
             <strong>LEGAL DISCLAIMER:</strong> Decree is a pre-filing intelligence and evidence-gathering tool. 
             The calculations provided are based on Section 16 of the MSMED Act, 2006, using the current RBI bank rate. 
@@ -113,7 +115,21 @@ export default function CalculatorPage() {
             by the Micro and Small Enterprise Facilitation Council (MSEFC) or the MSME SAMADHAAN portal. 
             All claims should be verified by a qualified legal professional before filing.
           </div>
+        </div>
       </PageTransition>
     </main>
+  );
+}
+
+// 2. Wrap the child component in Suspense in the default export
+export default function CalculatorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center font-mono font-bold text-xl">
+        Loading calculator...
+      </div>
+    }>
+      <CalculatorContent />
+    </Suspense>
   );
 }
