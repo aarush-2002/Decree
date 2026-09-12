@@ -105,6 +105,14 @@ export default function CalculatorPage() {
             </Link>
           </div>
         </div>
+                  {/* Legal Disclaimer */}
+          <div className="mt-8 p-4 bg-gray-200 border-3 border-black text-xs font-mono text-gray-700">
+            <strong>LEGAL DISCLAIMER:</strong> Decree is a pre-filing intelligence and evidence-gathering tool. 
+            The calculations provided are based on Section 16 of the MSMED Act, 2006, using the current RBI bank rate. 
+            This tool does not constitute formal legal advice, nor does it replace official statutory adjudication 
+            by the Micro and Small Enterprise Facilitation Council (MSEFC) or the MSME SAMADHAAN portal. 
+            All claims should be verified by a qualified legal professional before filing.
+          </div>
       </PageTransition>
     </main>
   );
