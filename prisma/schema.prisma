@@ -55,12 +55,12 @@ model Invoice {
   buyerId              String
   invoiceNumber        String
   invoiceDate          DateTime
-  amount               Float
   deliveryDate         DateTime
   deemedAcceptanceDate DateTime?
   dueDate              DateTime
   status               String    
   extractedByAi        Boolean   @default(false)
+  amount               Decimal   // CHANGED FROM Float
   
   client      Client   @relation(fields: [clientId], references: [id])
   buyer       Buyer    @relation(fields: [buyerId], references: [id])
@@ -85,8 +85,8 @@ model Case {
   state               String    
   filedAt             DateTime  @default(now())
   currentDeadlineAt   DateTime?
-  interestAccrued     Float     @default(0)
-  principalAmount     Float
+  interestAccrued     Decimal   @default(0) // CHANGED FROM Float
+  principalAmount     Decimal   // CHANGED FROM Float
   
   invoice      Invoice      @relation(fields: [invoiceId], references: [id])
   events       CaseEvent[]
@@ -117,5 +117,5 @@ model Reminder {
 model RbiRateHistory {
   id              String   @id @default(uuid())
   effectiveFrom   DateTime @unique
-  bankRatePercent Float
+  bankRatePercent Decimal  // CHANGED FROM Float
 }
