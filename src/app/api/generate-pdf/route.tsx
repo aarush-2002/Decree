@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pdf } from '@react-pdf/renderer';
 import { InvoicePDF } from '@/lib/InvoicePDF';
 
+// Force Node.js runtime (required for PDF generation on Vercel)
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { invoiceNumber, clientName, buyerName, amount, interest, total } = body;
 
-    // Generate the PDF buffer
     const pdfDocument = pdf(
       <InvoicePDF 
         invoiceNumber={invoiceNumber}
@@ -18,9 +20,10 @@ export async function POST(request: NextRequest) {
         total={total}
       />
     );
-    const buffer = await pdfDocument.toBuffer();
+    
+    // Get the buffer and ensure it's typed correctly for NextResponse
+    const buffer = await pdfDocument.toBuffer() as unknown as Buffer;
 
-    // Return the PDF as a downloadable file
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/pdf',
