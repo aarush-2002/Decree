@@ -1,105 +1,111 @@
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { BrutalButton } from '@/components/ui/BrutalButton';
-import { BrutalCard } from '@/components/ui/BrutalCard';
-import { FileText, Clock, TrendingUp, ArrowRight } from 'lucide-react';
+import { FileText, Scale, Shield, ArrowRight, CheckCircle } from 'lucide-react';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#FAFAFA] text-black">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="bg-base text-white py-20 md:py-32 border-b-4 border-black">
-        <div className="container mx-auto px-6">
-          <h1 className="text-6xl md:text-8xl font-black font-display tracking-tighter mb-6">
-            DECREE
-          </h1>
-          <p className="text-2xl md:text-3xl font-bold text-primary font-mono mb-8">
-            GET WHAT'S OWED. FAST.
-          </p>
-          <div className="border-t-4 border-primary w-32 mb-8"></div>
-          <p className="text-xl max-w-2xl font-body leading-relaxed text-gray-300 mb-12">
-            A legal-tech platform that makes India's strongest MSME payment law actually usable. 
-            Upload an invoice. Get paid.
-          </p>
-          
-          <div className="flex flex-wrap gap-4">
-            <Link href="/dashboard">
-              <BrutalButton variant="primary" size="xl" className="text-base">
-                Launch Decree <ArrowRight className="ml-2 w-6 h-6" />
-              </BrutalButton>
-            </Link>
-            <Link href="/upload">
-              <BrutalButton variant="outline" size="xl" className="text-white border-white hover:bg-white hover:text-base">
-                Quick Demo
-              </BrutalButton>
-            </Link>
+      {/* Hero Section - Tighter spacing, better font hierarchy */}
+      <section className="border-b-4 border-black bg-white py-16 md:py-24">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            <div className="flex-1 space-y-6">
+              <div className="inline-block bg-[#F59E0B] border-2 border-black px-3 py-1 font-mono text-sm font-bold uppercase">
+                For Indian MSMEs
+              </div>
+              <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight leading-[1.1]">
+                GET WHAT'S <br/> <span className="text-[#F59E0B]">OWED. FAST.</span>
+              </h1>
+              <p className="text-lg md:text-xl font-body text-gray-600 max-w-lg leading-relaxed">
+                Turn messy invoices into court-ready claims. We calculate your exact legal interest under the MSMED Act and generate your filing packet in seconds.
+              </p>
+              
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/dashboard">
+                  <BrutalButton variant="primary" size="xl">
+                    Launch Decree <ArrowRight className="ml-2 w-5 h-5" />
+                  </BrutalButton>
+                </Link>
+                <Link href="/upload">
+                  <BrutalButton variant="outline" size="xl">
+                    Quick Demo
+                  </BrutalButton>
+                </Link>
+              </div>
+            </div>
+
+            {/* Added Visual Element to fill empty space */}
+            <div className="flex-1 w-full">
+              <div className="border-4 border-black bg-white p-6 shadow-[8px_8px_0px_0px_#000000]">
+                <div className="flex items-center gap-3 mb-4 border-b-2 border-black pb-3">
+                  <FileText className="w-6 h-6" />
+                  <span className="font-mono font-bold">INVOICE_EXTRACTED.pdf</span>
+                </div>
+                <div className="space-y-3 font-mono text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Principal:</span> <span className="font-bold">₹ 4,50,000</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Days Overdue:</span> <span className="font-bold text-red-600">92 Days</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Penal Rate:</span> <span className="font-bold">19.5% (3x RBI)</span></div>
+                  <div className="flex justify-between border-t-2 border-black pt-3 mt-3">
+                    <span className="font-bold text-lg">Total Claim:</span> 
+                    <span className="font-black text-xl text-[#F59E0B]">₹ 5,32,191</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 border-b-4 border-black">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <BrutalCard variant="amber">
-              <div className="text-6xl font-black font-mono mb-2 text-primary">&lt;15%</div>
-              <div className="text-lg font-bold uppercase tracking-wide font-display">Of MSMEs File Complaints</div>
-            </BrutalCard>
-            <BrutalCard variant="teal">
-              <div className="text-6xl font-black font-mono mb-2 text-secondary">45 DAYS</div>
-              <div className="text-lg font-bold uppercase tracking-wide font-display">Legal Payment Window</div>
-            </BrutalCard>
-            <BrutalCard variant="default">
-              <div className="text-6xl font-black font-mono mb-2">~22%</div>
-              <div className="text-lg font-bold uppercase tracking-wide font-display">Annual Penal Interest</div>
-            </BrutalCard>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-gray-100 border-b-4 border-black">
-        <div className="container mx-auto px-6">
-          <h2 className="text-5xl font-black font-display mb-12 tracking-tight">HOW IT WORKS</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Features Grid - Balanced and filled */}
+      <section className="py-16 bg-[#FAFAFA] border-b-4 border-black">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <h2 className="text-3xl md:text-4xl font-black font-display mb-10 tracking-tight text-center uppercase">
+            How Decree Works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { icon: FileText, title: "Upload Invoice", desc: "Drop your invoice PDF or photo. AI extracts all details automatically." },
-              { icon: Clock, title: "Auto-Calculate", desc: "Interest computed at 3× RBI rate. Eligibility checked instantly." },
-              { icon: TrendingUp, title: "File & Track", desc: "Generate filing packet. Track deadlines until money arrives." },
+              { icon: FileText, title: "1. Upload Evidence", desc: "Drop any invoice PDF or image. Our engine extracts dates, amounts, and buyer details instantly." },
+              { icon: Scale, title: "2. Deterministic Math", desc: "We apply Section 16 of the MSMED Act. No AI hallucinations. Just exact, reproducible legal interest." },
+              { icon: Shield, title: "3. Generate Packet", desc: "Download a court-ready PDF containing your evidence, calculations, and statutory notices." },
             ].map((feature, index) => (
-              <BrutalCard key={index} variant="amber" className="h-full">
-                <feature.icon className="w-12 h-12 text-primary mb-4" />
-                <h3 className="text-2xl font-black font-display mb-3 uppercase">{feature.title}</h3>
-                <p className="text-base font-body text-gray-600">{feature.desc}</p>
-              </BrutalCard>
+              <div key={index} className="bg-white border-2 border-black p-6 hover:-translate-y-1 transition-transform duration-300">
+                <feature.icon className="w-10 h-10 text-[#F59E0B] mb-4" />
+                <h3 className="text-xl font-black font-display mb-2 uppercase">{feature.title}</h3>
+                <p className="text-base font-body text-gray-600 leading-relaxed">{feature.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="border-4 border-primary p-10 md:p-16 bg-base shadow-[8px_8px_0px_0px_#ffb020]">
-            <h2 className="text-4xl md:text-6xl font-black font-display mb-6 tracking-tight text-white">
-              STOP WAITING.<br />START FILING.
-            </h2>
-            <Link href="/dashboard">
-              <BrutalButton variant="primary" size="xl" className="text-lg mt-4">
-                Get Started Now <ArrowRight className="ml-2 w-6 h-6" />
-              </BrutalButton>
-            </Link>
+      {/* Trust/Stats Section - Fills the bottom */}
+      <section className="py-16 bg-black text-white border-b-4 border-black">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-4xl md:text-5xl font-black font-mono text-[#F59E0B] mb-2">₹10,000Cr+</div>
+              <div className="text-sm font-mono uppercase tracking-wider text-gray-400">MSME Capital Blocked</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-black font-mono text-[#F59E0B] mb-2">45 Days</div>
+              <div className="text-sm font-mono uppercase tracking-wider text-gray-400">Legal Payment Window</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-black font-mono text-[#F59E0B] mb-2">100%</div>
+              <div className="text-sm font-mono uppercase tracking-wider text-gray-400">Statutory Compliance</div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t-4 border-black bg-white py-12">
-        <div className="container mx-auto px-6 flex justify-between items-center">
-          <div className="font-display font-black text-2xl tracking-tight">DECREE</div>
-          <div className="font-mono text-sm text-gray-600">© 2026 Decree. Built for MSMEs.</div>
+      <footer className="py-8 bg-white">
+        <div className="container mx-auto px-6 flex justify-between items-center font-mono text-xs text-gray-500">
+          <div className="font-black text-black text-lg">DECREE</div>
+          <div>© 2026 Decree. Built for India's MSMEs.</div>
         </div>
       </footer>
     </main>
