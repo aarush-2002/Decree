@@ -1,38 +1,47 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/lib/utils'; // Make sure you have this utility, or just use template literals
 
-interface BrutalButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'destructive';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-}
+const buttonVariants = cva(
+  // BASE STYLES: Fixes sizing, animations, and hover
+  "inline-flex items-center justify-center font-black font-display uppercase tracking-wide transition-all duration-300 ease-in-out border-2 border-black focus:outline-none disabled:opacity-50 disabled:pointer-events-none",
+  {
+    variants: {
+      variant: {
+        primary: "bg-[#F59E0B] text-black hover:bg-[#D97706] hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_#000000]", // Better Amber, smooth hover
+        outline: "bg-transparent text-black border-2 border-black hover:bg-black hover:text-white hover:-translate-y-1",
+        ghost: "border-transparent hover:bg-gray-200",
+        destructive: "bg-red-600 text-white hover:bg-red-700",
+      },
+      size: {
+        sm: "h-9 px-4 text-sm",
+        md: "h-11 px-6 text-base",
+        lg: "h-12 px-8 text-base",
+        xl: "h-14 px-10 text-lg",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  }
+);
 
-export const BrutalButton: React.FC<BrutalButtonProps> = ({ 
-  variant = 'primary', 
-  size = 'md', 
-  className, 
-  children, 
-  ...props 
-}) => {
-  const variants = {
-    primary: 'bg-primary text-base hover:bg-primary/90',
-    secondary: 'bg-secondary text-base hover:bg-secondary/90',
-    outline: 'bg-transparent text-primary border-primary hover:bg-primary hover:text-base',
-    destructive: 'bg-destructive text-white hover:bg-destructive/90',
-  };
+export interface BrutalButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
 
-  const sizes = {
-    sm: 'px-4 py-2 text-sm',
-    md: 'px-6 py-3 text-base',
-    lg: 'px-8 py-4 text-lg',
-    xl: 'px-10 py-5 text-xl',
-  };
+const BrutalButton = forwardRef<HTMLButtonElement, BrutalButtonProps>(
+  ({ className, variant, size, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
+);
+BrutalButton.displayName = "BrutalButton";
 
-  return (
-    <button 
-      className={cn('brutal-button', variants[variant], sizes[size], className)} 
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
+export { BrutalButton, buttonVariants };
