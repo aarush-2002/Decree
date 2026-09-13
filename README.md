@@ -2,7 +2,7 @@
 
 > **Get What's Owed. Fast.**
 
-[![Live Demo](https://img.shields.io/badge/demo-live-F59E0B?style=for-the-badge&logo=vercel&logoColor=black)](https://decree-omega.vercel.app)
+[![Live Demo](https://img.shields.io/badge/demo-live-F59E0B?style=for-the-badge&logo=vercel&logoColor=black)](https://decree-woad.vercel.app/)
 [![GitHub](https://img.shields.io/badge/github-repo-000?style=for-the-badge&logo=github)](https://github.com/aarush-2002/Decree)
 [![Built by Devansh Mishra](https://img.shields.io/badge/built_by-Devansh_Mishra-111?style=for-the-badge)](https://github.com/aarush-2002/Decree)
 
