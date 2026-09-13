@@ -94,17 +94,3 @@ Processing a commercial invoice isn't a simple database lookup; it requires an a
     └─────────┘  └─────────┘  └─────────  └─────────┘
 
 
-
-### 🤖 Agentic Component Mapping
-
-- **Agent/Controller:** Next.js API routes orchestrate the extraction and calculation pipeline.
-- **Tools:** `@react-pdf/renderer` (PDF generation), `Decimal.js` (Precision math).
-- **External Systems:** Clerk (Authentication), Neon (PostgreSQL).
-- **Memory/State:** PostgreSQL (Persistent tenant-isolated case state), React State (UI flow).
-- **Retrieval:** Static retrieval of MSMED Act Section 16 statutory formulas and RBI rates.
-- **Planning:** The extraction pipeline plans the flow: Upload → Parse → Validate → Calculate.
-- **Evaluation/Verification:** Deterministic math checks + a mandatory Human-in-the-Loop review step.
-- **Human Interaction:** User uploads evidence, reviews AI-extracted data, and confirms the final packet.
-- **Failure Handling:** Zod schema validation, `try/catch` blocks, and fallback to manual data entry if extraction fails.
-
----
