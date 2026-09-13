@@ -2,7 +2,7 @@
 
 > **Get What's Owed. Fast.**
 
-[![Live Demo](https://img.shields.io/badge/demo-live-F59E0B?style=for-the-badge&logo=vercel&logoColor=black)]([https://decree-omega.vercel.app](https://decree-woad.vercel.app/))
+[![Live Demo](https://img.shields.io/badge/demo-live-F59E0B?style=for-the-badge&logo=vercel&logoColor=black)](https://decree-omega.vercel.app)
 [![GitHub](https://img.shields.io/badge/github-repo-000?style=for-the-badge&logo=github)](https://github.com/aarush-2002/Decree)
 [![Built by Devansh Mishra](https://img.shields.io/badge/built_by-Devansh_Mishra-111?style=for-the-badge)](https://github.com/aarush-2002/Decree)
 
@@ -33,7 +33,7 @@ MSMEs have the law on their side, but they lack the **tools** to use it.
 
 No lawyers. No confusion. Just results.
 
-##  Why an Agentic Solution?
+## 🤖 Why an Agentic Solution?
 
 Processing a commercial invoice isn't a simple database lookup; it requires an autonomous workflow. We built Decree as an agent because it needs to:
 
@@ -41,7 +41,7 @@ Processing a commercial invoice isn't a simple database lookup; it requires an a
 2. **Retrieve & Compute:** Dynamically fetch current RBI rates and apply deterministic legal formulas without hallucinations.
 3. **Verify & Execute:** Self-evaluate the extracted data, prompt the human for missing fields (Human-in-the-Loop), and autonomously compile the final court-ready PDF packet.
 
-##  Key Features
+## ✨ Key Features
 
 - **Smart Invoice Extraction:** Handles messy, real-world documents with a human-in-the-loop verification step.
 - **Deterministic Legal Math:** Applies Section 16 of the MSMED Act with 100% reproducible, legally defensible calculations.
@@ -69,7 +69,7 @@ Processing a commercial invoice isn't a simple database lookup; it requires an a
 ┌─────────────────────────────────────────────────────────────┐
 │                    HUMAN INTERACTION                        │
 │                    (MSME User)                              │
-└──────────────────────────┬──────────────────────────────────
+└──────────────────────────┬──────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -82,15 +82,13 @@ Processing a commercial invoice isn't a simple database lookup; it requires an a
 │               AGENT CONTROLLER (API)                        │
 │         (Next.js API Routes / Orchestration)                │
 │                                                             │
-│  ┌─────────────  ┌─────────────┐  ─────────────┐        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
 │  │  Planning   │→ │  Execution  │→ │ Verification│        │
-│  └─────────────┘  └─────────────┘  ─────────────┘        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
 └─────────┬────────────┬────────────┬────────────┬──────────┘
           │            │            │            │
           ▼            ▼            ▼            ▼
-    ┌─────────┐  ─────────┐  ┌─────────┐  ┌─────────┐
+    ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
     │ MEMORY  │  │RETRIEVAL│  │  TOOLS  │  │EXTERNAL │
     │  (DB)   │  │ (Rules) │  │ (PDF)   │  │(Clerk)  │
-    └─────────┘  └─────────┘  └─────────  └─────────┘
-
-
+    └─────────┘  └─────────┘  └─────────┘  └─────────┘
