@@ -49,14 +49,78 @@ export default function DashboardPage() {
   }, []);
   // Don't render anything until client is mounted
   if (!isClient) {
-    return (
-      <main className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
-        <div className="text-center">
-          <Clock className="w-12 h-12 mx-auto mb-4 animate-spin text-[#ffb020]" />
-          <p className="font-mono">Loading...</p>
+  return (
+    <main className="min-h-screen bg-[#FAFAFA] text-black">
+      <Navbar />
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b-4 border-black pb-6">
+          <div>
+            <h1 className="text-4xl font-black font-display tracking-tight uppercase">Case Dashboard</h1>
+            <p className="font-mono text-sm text-gray-600 mt-1">Manage your delayed payment claims and evidence.</p>
+          </div>
+          <Link href="/upload">
+            <BrutalButton variant="primary" size="lg">
+              <Plus className="w-5 h-5 mr-2" /> New Case
+            </BrutalButton>
+          </Link>
         </div>
-      </main>
-    );
+
+        {/* 2-Column Layout to fill space */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEFT COLUMN: Cases (Takes up 2/3 space) */}
+          <div className="lg:col-span-2 space-y-6">
+            {loading ? (
+              <div className="text-center py-20 font-mono text-gray-500 border-2 border-dashed border-gray-300">
+                Loading cases...
+              </div>
+            ) : cases.length === 0 ? (
+              <div className="bg-white border-2 border-black p-12 text-center">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h2 className="text-2xl font-black font-display uppercase mb-2">No Active Cases</h2>
+                <p className="font-mono text-sm text-gray-600 mb-6">Upload your first invoice to start tracking a claim.</p>
+                <Link href="/upload">
+                  <BrutalButton variant="outline" size="md">Upload Invoice</BrutalButton>
+                </Link>
+              </div>
+            ) : (
+              cases.map((caseItem) => (
+                // ... (Keep your existing BrutalCard mapping here, just ensure it uses bg-white and border-2 border-black)
+              ))
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: Fillers (Takes up 1/3 space) */}
+          <div className="space-y-6">
+            
+            {/* Compliance Checklist Widget */}
+            <div className="bg-white border-2 border-black p-6">
+              <h3 className="font-black font-display uppercase mb-4 border-b-2 border-black pb-2">Filing Checklist</h3>
+              <ul className="space-y-3 font-mono text-sm">
+                {['Udyam Registration Certificate', 'Signed Invoice Copy', 'Proof of Delivery', 'Buyer Acknowledgement'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <CheckCircle className={`w-4 h-4 ${i < 2 ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={i < 2 ? 'text-gray-900' : 'text-gray-500'}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal Insights Widget */}
+            <div className="bg-[#F59E0B] border-2 border-black p-6">
+              <h3 className="font-black font-display uppercase mb-3 border-b-2 border-black pb-2">MSMED Insight</h3>
+              <p className="font-mono text-sm leading-relaxed">
+                Under Section 16, if a buyer fails to pay within 45 days, they are liable to pay compound interest at 3x the RBI bank rate.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  );
   }
 
   return (
