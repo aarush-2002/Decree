@@ -2,7 +2,8 @@
 // Shared chrome for the signed-in app: top bar + calm page entrance.
 // Motion inside the tool is deliberately restrained (fade + 8px, 0.4s once).
 import Link from 'next/link';
-import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { useUser, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut } from './AuthGate';
 import { Scale } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -23,7 +24,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3">
             <SignedIn>
               <span className="hidden text-sm text-muted sm:inline">{useUser().user?.firstName ?? ''}</span>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton>
+              <UserButton.MenuItems>
+                <UserButton.Link label="Sign out" labelIcon={null} href="/"/>
+              </UserButton.MenuItems>
+            </UserButton>
             </SignedIn>
             <SignedOut>
               <Button size="sm" href="/sign-in">Log in</Button>

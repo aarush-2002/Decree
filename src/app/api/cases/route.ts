@@ -34,7 +34,7 @@ export async function GET() {
     const rate = await resolveRbiBankRate();
     const today = new Date();
 
-    const cases = invoices.map((inv) => {
+    const cases = invoices.map((inv: any) => {
       const daysOverdue = calendarDaysBetween(inv.dueDate, today);
       let interestAmount = 0;
       if (daysOverdue > 0) {

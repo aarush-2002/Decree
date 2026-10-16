@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { useUser, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut } from './AuthGate';
 import { Menu, X, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -67,7 +68,11 @@ export function Navbar() {
             <span className="text-sm text-muted">
               {user?.firstName ? `Hi, ${user.firstName}` : ''}
             </span>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton>
+              <UserButton.MenuItems>
+                <UserButton.Link label="Sign out" labelIcon={null} href="/"/>
+              </UserButton.MenuItems>
+            </UserButton>
           </SignedIn>
         </div>
 
@@ -101,7 +106,11 @@ export function Navbar() {
               <Button variant="primary" href="/sign-up" className="flex-1">Get Started</Button>
             </SignedOut>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton>
+              <UserButton.MenuItems>
+                <UserButton.Link label="Sign out" labelIcon={null} href="/"/>
+              </UserButton.MenuItems>
+            </UserButton>
             </SignedIn>
           </div>
         </div>

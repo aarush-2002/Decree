@@ -151,12 +151,12 @@ function CalculatorInner() {
               <Card className="border-primary/20 bg-primary p-8 text-canvas md:p-10">
                 <p className="font-mono text-xs uppercase tracking-[0.2em] text-canvas/60">Calculated interest</p>
                 <p className="mt-2 font-serif text-4xl md:text-5xl" style={{ fontWeight: 500 }}>
-                  ₹<CountUp value={result.interest} />
+                  <CountUp value={result.interest} />
                 </p>
                 <div className="mt-8 border-t border-canvas/15 pt-6">
                   <p className="font-mono text-xs uppercase tracking-[0.2em] text-canvas/60">Total claim amount</p>
                   <p className="mt-2 font-serif text-5xl leading-none md:text-6xl" style={{ fontWeight: 500 }}>
-                    ₹<CountUp value={result.totalClaim} duration={1500} highlightBrass />
+                    <CountUp value={result.totalClaim} duration={1500} highlightBrass />
                   </p>
                   <p className="mt-3 text-sm text-canvas/60">Principal {formatINR(result.principal)} + interest {formatINR(result.interest)}. As of {formatDate(asOf)}.</p>
                 </div>

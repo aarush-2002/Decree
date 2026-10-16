@@ -139,14 +139,15 @@ export function marquee(track: HTMLElement) {
 
   const tween = gsap.to(track, { x: half(), duration: 28, ease: 'none', repeat: -1 });
   let dir = 1;
-  const vel = ScrollTrigger.getVelocity();
+  const st = ScrollTrigger as unknown as { getVelocity: () => number };
+  const vel = st.getVelocity();
   if (Math.abs(vel) > 800) {
     dir = vel > 0 ? -1 : 1;
     tween.timeScale(dir * 2.2);
     setTimeout(() => tween.timeScale(dir), 500);
   }
   const onScroll = () => {
-    const v = ScrollTrigger.getVelocity();
+    const v = st.getVelocity();
     if (Math.abs(v) > 1200) {
       tween.timeScale((v > 0 ? 1 : -1) * 2.4);
       clearTimeout((marquee as any)._t);

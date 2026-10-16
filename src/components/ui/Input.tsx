@@ -2,12 +2,13 @@
 import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
-interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputBase {
   label?: string;
   hint?: string;
   error?: string;
   prefix?: string; /* e.g. ₹ */
 }
+interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof InputBase>, InputBase {}
 
 export function Input({ label, hint, error, prefix, className, id, ...rest }: Props) {
   const auto = useId();
@@ -48,7 +49,10 @@ export function Input({ label, hint, error, prefix, className, id, ...rest }: Pr
   );
 }
 
-export function Textarea({ label, hint, className, id, ...rest }: Props & { rows?: number }) {
+interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, keyof InputBase>, InputBase {
+  rows?: number;
+}
+export function Textarea({ label, hint, className, id, ...rest }: TextareaProps) {
   const auto = useId();
   const inputId = id ?? auto;
   return (

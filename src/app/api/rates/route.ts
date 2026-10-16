@@ -19,7 +19,7 @@ export async function GET() {
         orderBy: { effectiveFrom: 'desc' },
         take: 12,
       });
-      history = rows.map((r) => ({
+      history = rows.map((r: any) => ({
         effectiveFrom: r.effectiveFrom.toISOString(),
         bankRatePercent: Number(r.bankRatePercent),
         source: r.source,

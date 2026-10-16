@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // Upsert tenant-scoped client (fixes duplicate-client sprawl).
       const client = await tx.client.upsert({
         where: { managingOrgId_name: { managingOrgId: ctx.orgId, name: clientName } },
