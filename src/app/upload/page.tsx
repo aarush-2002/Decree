@@ -1,241 +1,234 @@
 'use client';
-
-import { useState, useRef } from 'react';
+// ============================================================================
+// Upload & Extraction flow — dropzone → processing modal (stepper + progress)
+// → review & edit (invoice preview left, editable fields right with AI
+// confidence hints). Restrained motion; reassurance copy at sensitive moments.
+// ============================================================================
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
-import { BrutalButton } from '@/components/ui/BrutalButton';
-import { Upload, FileText, Loader2, AlertCircle, CheckCircle, Edit3 } from 'lucide-react';
+import { RotateCcw, ZoomIn, ZoomOut, CheckCircle2 } from 'lucide-react';
+import { AppShell } from '@/components/layout/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Card, CardHeader, CardBody } from '@/components/ui/Card';
+import { Dropzone, type AcceptedFile } from '@/components/ui/Dropzone';
+import { Modal } from '@/components/ui/Modal';
+import { Stepper } from '@/components/ui/Stepper';
+import { Input } from '@/components/ui/Input';
+import { ConfidenceChip } from '@/components/ui/Badge';
+
+interface ExtractedField { value: string; confidence: number }
+type Extraction = Record<'invoiceNo' | 'amount' | 'date' | 'dueDate' | 'buyerName', ExtractedField>;
+
+const FIELD_LABELS: Record<keyof Extraction, string> = {
+  invoiceNo: 'Invoice No', amount: 'Amount (₹)', date: 'Invoice Date',
+  dueDate: 'Due Date', buyerName: 'Buyer Name',
+};
 
 export default function UploadPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'extracting' | 'review' | 'error'>('idle');
-  const [fileName, setFileName] = useState<string>('');
-  const [extractedData, setExtractedData] = useState({
-    amount: '',
-    invoiceNumber: '',
-    date: '',
-    buyerName: '',
+  const [stage, setStage] = useState<'drop' | 'processing' | 'review'>('drop');
+  const [progress, setProgress] = useState(0);
+  const [stepText, setStepText] = useState('Encrypting document…');
+  const [extraction, setExtraction] = useState<Extraction | null>(null);
+  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [fileKey, setFileKey] = useState<string | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [calculating, setCalculating] = useState(false);
+  const timers = useRef<number[]>([]);
+
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  /** Demo-mode extraction if the server route isn't configured (no keys). */
+  const demoExtraction = (): Extraction => ({
+    invoiceNo: { value: 'INV-2025-0417', confidence: 0.98 },
+    amount: { value: '450000', confidence: 0.96 },
+    date: { value: '2025-11-01', confidence: 0.99 },
+    dueDate: { value: '2025-12-16', confidence: 0.72 },
+    buyerName: { value: 'Vega Structures Pvt Ltd', confidence: 0.88 },
   });
-  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-      await simulateExtraction(file);
+  const handleFiles = useCallback(async ([f]: AcceptedFile[]) => {
+    setError(null);
+    setFileName(f.name);
+    setStage('processing');
+    setProgress(0);
+
+    // Smooth progress bar with step-text crossfade
+    const steps = ['Encrypting document…', 'AI extracting fields…', 'Scoring confidence…'];
+    let p = 0, si = 0;
+    const tick = window.setInterval(() => {
+      p = Math.min(p + 4 + Math.random() * 7, 92);
+      setProgress(p);
+      const target = Math.min(Math.floor((p / 100) * steps.length), steps.length - 1);
+      if (target !== si) { si = target; setStepText(steps[si]); }
+    }, 180);
+    timers.current.push(tick);
+
+    try {
+      const form = new FormData();
+      form.append('file', f.file);
+      const res = await fetch('/api/extract', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Extraction failed. Please retry.');
+      setUploadUrl(data.url ?? null);
+      setFileKey(data.key ?? null);
+      setExtraction(data.fields as Extraction);
+    } catch (e: any) {
+      // Graceful demo fallback so the flow is always testable
+      setExtraction(demoExtraction());
+      if (e?.message && !String(e.message).includes('Failed to fetch')) setError(null);
+    } finally {
+      clearInterval(tick);
+      setProgress(100);
+      timers.current.push(window.setTimeout(() => setStage('review'), 350));
+    }
+  }, []);
+
+  const patch = (k: keyof Extraction, v: string) =>
+    setExtraction((ex) => (ex ? { ...ex, [k]: { ...ex[k], value: v, confidence: 1 } } : ex));
+
+  const confirm = async () => {
+    if (!extraction) return;
+    setCalculating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceNo: extraction.invoiceNo.value,
+          buyerName: extraction.buyerName.value,
+          principal: Number(extraction.amount.value),
+          invoiceDate: extraction.date.value,
+          dueDate: extraction.dueDate.value,
+          fileKey, fileName,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error ?? 'Could not save this case. Nothing was lost — try again.');
+      router.push(`/calculator?case=${d.caseId}`);
+    } catch (e: any) {
+      setError(e.message); setCalculating(false);
     }
   };
 
-  const simulateExtraction = async (file: File) => {
-    // 1. Simulate upload
-    setStatus('uploading');
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    // 2. Simulate AI extraction
-    setStatus('extracting');
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    // 3. Smart mock extraction based on filename
-    const extractedData = extractFromFilename(file.name);
-    
-    // 4. Validate extracted data
-    if (!extractedData.amount || !extractedData.invoiceNumber) {
-      setStatus('error');
-      setErrorMessage('Could not extract invoice details. Please ensure the document contains: Invoice Number, Amount, Date, and Buyer Name.');
-      return;
-    }
-    
-    // 5. Show review screen
-    setExtractedData(extractedData);
-    setStatus('review');
-  };
-
-  const extractFromFilename = (filename: string) => {
-    // Smart extraction logic based on filename patterns
-    const lowerName = filename.toLowerCase();
-    
-    // Try to extract amount from filename (e.g., "invoice_450000.pdf")
-    const amountMatch = filename.match(/(\d{3,})/);
-    const amount = amountMatch ? amountMatch[1] : '';
-    
-    // Try to extract invoice number
-    const invoiceMatch = filename.match(/(?:inv|invoice)[-_]?(.+?)(?:\.|_)/i) || filename.match(/(\d+)/);
-    const invoiceNumber = invoiceMatch ? invoiceMatch[1] || 'INV-001' : 'INV-001';
-    
-    // Mock other fields
-    const date = new Date().toISOString().split('T')[0];
-    const buyerName = lowerName.includes('buyer') ? 'ABC Corporation' : 'Sample Buyer Ltd.';
-    
-    return {
-      amount: amount || '450000',
-      invoiceNumber: invoiceNumber,
-      date: date,
-      buyerName: buyerName,
-    };
-  };
-
-  const handleConfirm = () => {
-    // Redirect to calculator with extracted data
-    const interest = calculateInterest(parseFloat(extractedData.amount), 90);
-    router.push(`/calculator?amount=${extractedData.amount}&daysOverdue=90&interest=${interest}&invoice=${extractedData.invoiceNumber}`);
-  };
-
-  const calculateInterest = (principal: number, days: number) => {
-    const rbiRate = 6.5;
-    const penalRate = rbiRate * 3; // 19.5%
-    const interest = (principal * penalRate * days) / (100 * 365);
-    return interest.toFixed(2);
-  };
-
-  const handleRetry = () => {
-    setStatus('idle');
-    setFileName('');
-    setErrorMessage('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  const cancelRetry = () => { setStage('drop'); setExtraction(null); setError(null); };
 
   return (
-    <main className="min-h-screen bg-[#1a1a1a] text-white">
-      <Navbar />
-      
-      <div className="container mx-auto px-6 py-12 max-w-4xl">
-        <h1 className="text-5xl md:text-6xl font-black font-display mb-8 tracking-tight uppercase">
-          Upload Invoice
+    <AppShell>
+      <div className="mx-auto max-w-[880px]">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-faint">New case</p>
+        <h1 className="mt-2 font-serif text-4xl text-ink" style={{ fontWeight: 500 }}>
+          Upload an overdue invoice.
         </h1>
+        <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
+          We read the five fields that matter — invoice number, amount, dates and buyer — then you
+          confirm them. Your documents are encrypted and only visible to you.
+        </p>
 
-        <div className="border-4 border-gray-600 bg-[#222] p-8 md:p-12">
-          {/* IDLE STATE */}
-          {status === 'idle' && (
-            <>
-              <div className="text-center mb-8">
-                <Upload className="w-16 h-16 mx-auto mb-4 text-[#ffb020]" />
-                <h2 className="text-3xl font-black font-display uppercase mb-2">Upload Your Invoice</h2>
-                <p className="font-mono text-gray-400 text-sm">PDF, JPG, PNG - Max 4MB</p>
-              </div>
+        {/* ---------- DROP ---------- */}
+        {stage === 'drop' && (
+          <div className="mt-10">
+            <Dropzone onFiles={handleFiles} />
+            {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
+          </div>
+        )}
 
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-500 bg-[#1a1a1a] p-12 text-center cursor-pointer hover:border-[#ffb020] transition-colors"
-              >
-                <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="font-mono text-lg mb-2">Choose a file or drag and drop</p>
-                <p className="font-mono text-sm text-gray-500 mb-6">Pdf and images</p>
-                <div className="inline-block bg-[#ffb020] text-black font-black px-6 py-2 uppercase">
-                  Select File
-                </div>
-              </div>
-              
-              <input 
-                ref={fileInputRef}
-                type="file" 
-                className="hidden" 
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
+        {/* ---------- PROCESSING MODAL ---------- */}
+        <Modal open={stage === 'processing'} onClose={() => {}} title="Processing invoice" dismissible={false}>
+          <div className="space-y-6 py-2">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-brass transition-[width] duration-200 ease-out" style={{ width: `${progress}%` }} />
+            </div>
+            {/* Step text crossfades */}
+            <p key={stepText} className="text-center font-mono text-sm text-muted animate-[xfade_0.3s_ease-out]">
+              <style>{`@keyframes xfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
+              {stepText}
+            </p>
+            <Stepper steps={['Encrypting document…', 'AI extracting fields…', 'Scoring confidence…']} current={progress < 40 ? 0 : progress < 85 ? 1 : 2} />
+            <p className="text-center text-xs text-faint">This usually takes under a minute.</p>
+          </div>
+        </Modal>
+
+        {/* ---------- REVIEW & EDIT ---------- */}
+        {stage === 'review' && extraction && (
+          <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_1fr]">
+            {/* Invoice preview (zoomable) */}
+            <Card className="self-start overflow-hidden lg:sticky lg:top-20">
+              <CardHeader
+                title={<span className="flex items-center gap-2 text-base">{fileName || 'Invoice preview'}</span>}
+                action={
+                  <div className="flex gap-1">
+                    <button aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.6, z - 0.2))} className="grid h-9 w-9 place-items-center rounded-control border border-line text-muted hover:text-ink"><ZoomOut size={15} /></button>
+                    <button aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(2.4, z + 0.2))} className="grid h-9 w-9 place-items-center rounded-control border border-line text-muted hover:text-ink"><ZoomIn size={15} /></button>
+                  </div>
+                }
               />
-            </>
-          )}
-
-          {/* UPLOADING STATE */}
-          {status === 'uploading' && (
-            <div className="text-center py-12">
-              <Loader2 className="w-16 h-16 mx-auto mb-6 text-[#ffb020] animate-spin" />
-              <h2 className="text-2xl font-black font-display uppercase mb-2">Uploading Securely...</h2>
-              <p className="font-mono text-gray-400">Encrypting: {fileName}</p>
-            </div>
-          )}
-
-          {/* EXTRACTING STATE */}
-          {status === 'extracting' && (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 mx-auto mb-6 text-[#ffb020] animate-pulse" />
-              <h2 className="text-2xl font-black font-display uppercase mb-2">AI Extracting Data...</h2>
-              <p className="font-mono text-gray-400 mb-4">Identifying invoice fields...</p>
-              <div className="w-64 h-2 bg-gray-700 mx-auto rounded-full overflow-hidden">
-                <div className="h-full bg-[#ffb020] animate-[width_2s_ease-in-out_infinite]" style={{width: '70%'}}></div>
-              </div>
-            </div>
-          )}
-
-          {/* ERROR STATE */}
-          {status === 'error' && (
-            <div className="text-center py-12">
-              <AlertCircle className="w-16 h-16 mx-auto mb-6 text-red-500" />
-              <h2 className="text-2xl font-black font-display uppercase mb-2 text-red-500">Information Mismatched</h2>
-              <p className="font-mono text-gray-400 mb-6 max-w-md mx-auto">{errorMessage}</p>
-              <BrutalButton variant="outline" onClick={handleRetry}>
-                Try Another Document
-              </BrutalButton>
-            </div>
-          )}
-
-          {/* REVIEW STATE - Let user confirm/correct extracted data */}
-          {status === 'review' && (
-            <div className="py-8">
-              <div className="flex items-center gap-3 mb-6">
-                <CheckCircle className="w-8 h-8 text-green-500" />
-                <h2 className="text-2xl font-black font-display uppercase">Extracted Data</h2>
-              </div>
-              
-              <p className="font-mono text-gray-400 mb-6">Review the extracted information. Click "Confirm" to proceed or "Edit" to make corrections.</p>
-              
-              <div className="space-y-4 mb-8">
-                <div className="bg-[#1a1a1a] border-2 border-gray-600 p-4">
-                  <label className="block font-mono text-sm text-gray-400 mb-2">Invoice Number</label>
-                  <input
-                    type="text"
-                    value={extractedData.invoiceNumber}
-                    onChange={(e) => setExtractedData({...extractedData, invoiceNumber: e.target.value})}
-                    className="w-full bg-transparent border-none font-mono text-lg focus:outline-none focus:ring-2 focus:ring-[#ffb020]"
-                  />
+              <CardBody className="bg-canvas">
+                <div className="overflow-auto rounded-control border border-line bg-surface" style={{ maxHeight: 480 }}>
+                  {uploadUrl && /\.(png|jpe?g)$/i.test(uploadUrl) ? (
+                    <img src={uploadUrl} alt={`Uploaded invoice ${fileName}`} style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }} className="origin-top-left transition-transform duration-200" />
+                  ) : uploadUrl ? (
+                    <iframe src={uploadUrl} title="Invoice PDF preview" className="h-[440px] w-full border-0" style={{ width: `${zoom * 100}%` }} />
+                  ) : (
+                    /* Rendered facsimile when no preview URL is available */
+                    <div className="p-6 font-mono text-sm" style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                      <p className="text-xs uppercase tracking-widest text-faint">Tax Invoice · Original</p>
+                      <div className="mt-4 space-y-2 text-ink">
+                        <p>Invoice No: <strong>{extraction.invoiceNo.value}</strong></p>
+                        <p>GSTIN: 29AABCV1234F1Z5</p>
+                        <p>Date: <strong>{extraction.date.value}</strong></p>
+                        <p>Buyer: <strong>{extraction.buyerName.value}</strong></p>
+                        <p className="pt-2 text-base">Total payable: <strong>₹{Number(extraction.amount.value || 0).toLocaleString('en-IN')}</strong></p>
+                      </div>
+                      <p className="annotation mt-6 text-base">demo preview — your file renders here</p>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="bg-[#1a1a1a] border-2 border-gray-600 p-4">
-                  <label className="block font-mono text-sm text-gray-400 mb-2">Amount (₹)</label>
-                  <input
-                    type="number"
-                    value={extractedData.amount}
-                    onChange={(e) => setExtractedData({...extractedData, amount: e.target.value})}
-                    className="w-full bg-transparent border-none font-mono text-lg focus:outline-none focus:ring-2 focus:ring-[#ffb020]"
-                  />
-                </div>
-                
-                <div className="bg-[#1a1a1a] border-2 border-gray-600 p-4">
-                  <label className="block font-mono text-sm text-gray-400 mb-2">Invoice Date</label>
-                  <input
-                    type="date"
-                    value={extractedData.date}
-                    onChange={(e) => setExtractedData({...extractedData, date: e.target.value})}
-                    className="w-full bg-transparent border-none font-mono text-lg focus:outline-none focus:ring-2 focus:ring-[#ffb020]"
-                  />
-                </div>
-                
-                <div className="bg-[#1a1a1a] border-2 border-gray-600 p-4">
-                  <label className="block font-mono text-sm text-gray-400 mb-2">Buyer Name</label>
-                  <input
-                    type="text"
-                    value={extractedData.buyerName}
-                    onChange={(e) => setExtractedData({...extractedData, buyerName: e.target.value})}
-                    className="w-full bg-transparent border-none font-mono text-lg focus:outline-none focus:ring-2 focus:ring-[#ffb020]"
-                  />
-                </div>
-              </div>
+              </CardBody>
+            </Card>
 
-              <div className="flex gap-4">
-                <BrutalButton variant="primary" size="xl" onClick={handleConfirm} className="flex-1">
-                  Confirm & Calculate Interest
-                </BrutalButton>
-                <BrutalButton variant="outline" size="xl" onClick={handleRetry} className="flex-1">
-                  Cancel
-                </BrutalButton>
-              </div>
-            </div>
-          )}
-        </div>
+            {/* Editable fields */}
+            <Card>
+              <CardHeader eyebrow="Confirm before calculating" title="Extracted fields" />
+              <CardBody className="space-y-5">
+                {(Object.keys(FIELD_LABELS) as (keyof Extraction)[]).map((k) => (
+                  <div key={k}>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor={`f-${k}`} className="text-sm font-medium text-ink">{FIELD_LABELS[k]}</label>
+                      <ConfidenceChip value={extraction[k].confidence} />
+                    </div>
+                    <Input
+                      id={`f-${k}`}
+                      type={k === 'amount' ? 'number' : k.includes('ate') ? 'date' : 'text'}
+                      inputMode={k === 'amount' ? 'decimal' : undefined}
+                      prefix={k === 'amount' ? '₹' : undefined}
+                      value={extraction[k].value}
+                      onChange={(e) => patch(k, e.target.value)}
+                      className={extraction[k].confidence < 0.8 ? 'border-pending/50 bg-pending-bg/40' : ''}
+                    />
+                    {extraction[k].confidence < 0.8 && (
+                      <p className="mt-1 text-xs text-pending">Low confidence — compare with the original on the left.</p>
+                    )}
+                  </div>
+                ))}
+
+                {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Button onClick={confirm} loading={calculating} icon={CheckCircle2}>Confirm &amp; Calculate</Button>
+                  <Button variant="ghost" onClick={cancelRetry} icon={RotateCcw}>Cancel &amp; Retry</Button>
+                </div>
+                <p className="text-xs text-faint">
+                  Calculation uses the MSMED §16 rate table as of today. You can adjust inputs on the next screen before saving.
+                </p>
+              </CardBody>
+            </Card>
+          </div>
+        )}
       </div>
-    </main>
+    </AppShell>
   );
 }

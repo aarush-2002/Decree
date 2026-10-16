@@ -1,210 +1,182 @@
 'use client';
-
-import { useEffect, useState } from 'react';  // ← THIS LINE IS MISSING OR BROKEN
-import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
-// ... rest of imports
-import { BrutalCard } from '@/components/ui/BrutalCard';
-import { BrutalButton } from '@/components/ui/BrutalButton';
+// ============================================================================
+// Dashboard — restrained app motion: rows stagger once, hover wash, sortable
+// headers, search + status filter. Mobile renders the same data as cards.
+// States: loading skeleton · empty · error · list.
+// ============================================================================
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, FileText, Scale, Clock, TrendingUp } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import { Plus, Search, ArrowRight, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AppShell } from '@/components/layout/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/Badge';
+import { DataTable, type Column } from '@/components/ui/Table';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Input } from '@/components/ui/Input';
+import { formatINR0, formatDate } from '@/lib/utils';
 
-// Force this page to be dynamic (no SSR)
-export const dynamic = 'force-dynamic';
-
-interface Case {
-  id: string;
-  client: string;
-  buyer: string;
-  amount: string;
-  status: string;
-  daysOverdue: number;
+interface Row {
+  id: string; caseNumber: string; buyer: string; principal: number;
+  daysOverdue: number; status: string; createdAt: string; totalClaim?: number | null;
 }
 
+type SortKey = 'caseNumber' | 'buyer' | 'principal' | 'daysOverdue' | 'status' | 'createdAt';
+
 export default function DashboardPage() {
-  const router = useRouter();
-  const [cases, setCases] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
+  const { user } = useUser();
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('all');
+  const [sortKey, setSortKey] = useState<SortKey>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-    useEffect(() => {
-    setIsClient(true);
+  const load = () => {
+    setError(null); setRows(null);
     fetch('/api/cases')
-      .then(res => res.json())
-      .then(data => {
-        // CRITICAL FIX: Check if data is actually an array before using it
-        if (Array.isArray(data)) {
-          setCases(data);
-        } else {
-          console.log("API returned non-array data (maybe not logged in?):", data);
-          setCases([]); // Fallback to empty list so it doesn't crash
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch cases:', err);
-        setCases([]); // Fallback to empty list
-        setLoading(false);
-      });
-  }, []);
-  // Don't render anything until client is mounted
-  if (!isClient) {
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => { if (!ok) throw new Error(d?.error ?? 'Could not load cases.'); setRows(d.cases ?? []); })
+      .catch((e) => setError(e.message));
+  };
+  useEffect(load, []);
+
+  const filtered = useMemo(() => {
+    let list = rows ?? [];
+    if (q) {
+      const s = q.toLowerCase();
+      list = list.filter((r) => r.buyer.toLowerCase().includes(s) || r.caseNumber.toLowerCase().includes(s));
+    }
+    if (status !== 'all') list = list.filter((r) => r.status === status);
+    return [...list].sort((a, b) => {
+      const av = a[sortKey] ?? '', bv = b[sortKey] ?? '';
+      const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [rows, q, status, sortKey, sortDir]);
+
+  const stats = useMemo(() => {
+    const list = rows ?? [];
+    return {
+      claims: list.length,
+      recovered: list.filter((r) => r.status === 'recovered').reduce((s, r) => s + (r.totalClaim ?? r.principal), 0),
+      active: list.filter((r) => !['recovered', 'rejected'].includes(r.status)).length,
+    };
+  }, [rows]);
+
+  const onSort = (key: string) => {
+    if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key as SortKey); setSortDir('asc'); }
+  };
+
+  const columns: Column<Row>[] = [
+    { key: 'caseNumber', header: 'Case ID', sortable: true, render: (r) => (
+      <Link href={`/case/${r.id}`} className="font-mono text-sm text-primary hover:text-brass">{r.caseNumber}</Link>
+    )},
+    { key: 'buyer', header: 'Buyer', sortable: true, render: (r) => <span className="text-ink">{r.buyer}</span> },
+    { key: 'principal', header: 'Principal', sortable: true, align: 'right', render: (r) => <span className="tnum amount">{formatINR0(r.principal)}</span> },
+    { key: 'daysOverdue', header: 'Days Overdue', sortable: true, align: 'right', render: (r) => <span className="tnum">{r.daysOverdue}</span> },
+    { key: 'status', header: 'Status', sortable: true, render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'view', header: '', render: (r) => (
+      <Link href={`/case/${r.id}`} aria-label={`View case ${r.caseNumber}`}
+        className="inline-grid h-11 w-11 place-items-center rounded-control border border-line-strong text-muted transition-colors hover:border-brass hover:text-brass">
+        <ArrowRight size={16} strokeWidth={1.5} />
+      </Link>
+    )},
+  ];
+
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-black">
-      <Navbar />
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b-4 border-black pb-6">
-          <div>
-            <h1 className="text-4xl font-black font-display tracking-tight uppercase">Case Dashboard</h1>
-            <p className="font-mono text-sm text-gray-600 mt-1">Manage your delayed payment claims and evidence.</p>
-          </div>
-          <Link href="/upload">
-            <BrutalButton variant="primary" size="lg">
-              <Plus className="w-5 h-5 mr-2" /> New Case
-            </BrutalButton>
-          </Link>
+    <AppShell>
+      {/* Header row — asymmetric: greeting left, action right */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-faint">Claims register</p>
+          <h1 className="mt-2 font-serif text-4xl text-ink" style={{ fontWeight: 500 }}>
+            Welcome back{user?.firstName ? `, ${user.firstName}` : ''}.
+          </h1>
         </div>
-
-        {/* 2-Column Layout to fill space */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* LEFT COLUMN: Cases (Takes up 2/3 space) */}
-          <div className="lg:col-span-2 space-y-6">
-            {loading ? (
-              <div className="text-center py-20 font-mono text-gray-500 border-2 border-dashed border-gray-300">
-                Loading cases...
-              </div>
-            ) : cases.length === 0 ? (
-              <div className="bg-white border-2 border-black p-12 text-center">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <h2 className="text-2xl font-black font-display uppercase mb-2">No Active Cases</h2>
-                <p className="font-mono text-sm text-gray-600 mb-6">Upload your first invoice to start tracking a claim.</p>
-                <Link href="/upload">
-                  <BrutalButton variant="outline" size="md">Upload Invoice</BrutalButton>
-                </Link>
-              </div>
-            ) : (
-              cases.map((caseItem) => (
-                // ... (Keep your existing BrutalCard mapping here, just ensure it uses bg-white and border-2 border-black)
-              ))
-            )}
-          </div>
-
-          {/* RIGHT COLUMN: Fillers (Takes up 1/3 space) */}
-          <div className="space-y-6">
-            
-            {/* Compliance Checklist Widget */}
-            <div className="bg-white border-2 border-black p-6">
-              <h3 className="font-black font-display uppercase mb-4 border-b-2 border-black pb-2">Filing Checklist</h3>
-              <ul className="space-y-3 font-mono text-sm">
-                {['Udyam Registration Certificate', 'Signed Invoice Copy', 'Proof of Delivery', 'Buyer Acknowledgement'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle className={`w-4 h-4 ${i < 2 ? 'text-green-600' : 'text-gray-300'}`} />
-                    <span className={i < 2 ? 'text-gray-900' : 'text-gray-500'}>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal Insights Widget */}
-            <div className="bg-[#F59E0B] border-2 border-black p-6">
-              <h3 className="font-black font-display uppercase mb-3 border-b-2 border-black pb-2">MSMED Insight</h3>
-              <p className="font-mono text-sm leading-relaxed">
-                Under Section 16, if a buyer fails to pay within 45 days, they are liable to pay compound interest at 3x the RBI bank rate.
-              </p>
-            </div>
-
-          </div>
-        </div>
+        <Button href="/upload" icon={Plus}>New Case</Button>
       </div>
-    </main>
-  );
-  }
 
-  return (
-    <main className="min-h-screen bg-[#1a1a1a] text-white">
-      <Navbar />
-      <div className="container mx-auto px-6 py-12">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
-          <div>
-            <h1 className="text-5xl font-black font-display tracking-tight uppercase">Your Cases</h1>
-            <p className="font-mono text-gray-400 mt-2">Track and manage your delayed payment claims</p>
+      {/* Summary stats — hairline row, not boxy cards */}
+      <div className="mt-8 grid grid-cols-1 divide-y divide-line rounded-card border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {[
+          { label: 'Total Claims', value: stats.claims == null ? '—' : String(stats.claims) },
+          { label: 'Total Recovered', value: rows ? formatINR0(stats.recovered) : '—' },
+          { label: 'Active Cases', value: String(stats.active) },
+        ].map((s) => (
+          <div key={s.label} className="px-6 py-6">
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-faint">{s.label}</p>
+            <p className="tnum mt-2 font-serif text-3xl text-primary" style={{ fontWeight: 500 }}>{rows ? s.value : <span className="skeleton inline-block h-8 w-28 align-middle" />}</p>
           </div>
-          <Link href="/upload">
-            <BrutalButton variant="primary" size="lg">
-              <Plus className="w-5 h-5 mr-2" /> New Case
-            </BrutalButton>
-          </Link>
+        ))}
+      </div>
+
+      {/* Search + filter bar */}
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search size={16} strokeWidth={1.5} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+          <Input aria-label="Search cases" placeholder="Search buyer or case ID…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
         </div>
+        <select
+          aria-label="Filter by status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="min-h-[44px] rounded-control border border-line-strong bg-surface px-3 text-sm text-ink focus:outline-none focus-visible:border-brass"
+        >
+          <option value="all">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="calculated">Calculated</option>
+          <option value="filed">Filed</option>
+          <option value="recovered">Recovered</option>
+        </select>
+      </div>
 
-        {loading ? (
-          <div className="text-center py-20 font-mono text-gray-400">
-            <Clock className="w-12 h-12 mx-auto mb-4 animate-spin" />
-            Loading cases...
-          </div>
-        ) : cases.length === 0 ? (
-          <BrutalCard variant="default" className="p-12 text-center">
-            <FileText className="w-16 h-16 mx-auto mb-6 text-gray-600" />
-            <h2 className="text-3xl font-black font-display uppercase mb-4">No Cases Yet</h2>
-            <p className="font-mono text-gray-400 mb-8 max-w-md mx-auto">
-              Upload your first invoice to start tracking a delayed payment claim
+      {/* Body: loading / error / empty / table */}
+      <div className="mt-6">
+        {error ? (
+          <Card className="flex flex-col items-start gap-4 p-8 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-center gap-3 text-[15px] text-ink">
+              <AlertTriangle size={18} strokeWidth={1.5} className="text-danger" />
+              {error}
             </p>
-            <Link href="/upload">
-              <BrutalButton variant="primary" size="xl">
-                Upload Invoice
-              </BrutalButton>
-            </Link>
-          </BrutalCard>
+            <Button variant="secondary" icon={RefreshCw} onClick={load}>Try again</Button>
+          </Card>
+        ) : rows === null ? (
+          <TableSkeleton />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            title="No cases yet."
+            body="Upload your first overdue invoice and DECREE will draft the Section 16 interest claim around it. Nothing is sent anywhere until you say so."
+            action={<Button href="/upload" icon={Plus}>Upload your first invoice</Button>}
+          />
+        ) : filtered.length === 0 ? (
+          <Card className="p-8 text-center text-muted">Nothing matches that search. Clear the filters to see all cases.</Card>
         ) : (
-          <div className="space-y-6">
-            {cases.map((caseItem) => (
-              <BrutalCard key={caseItem.id} variant="default" className="p-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Scale className="w-6 h-6 text-[#ffb020]" />
-                      <h3 className="text-2xl font-black font-display uppercase">
-                        {caseItem.id}
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-sm">
-                      <div>
-                        <span className="text-gray-500">Client:</span>
-                        <span className="ml-2 text-white">{caseItem.client}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Buyer:</span>
-                        <span className="ml-2 text-white">{caseItem.buyer}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Amount:</span>
-                        <span className="ml-2 text-[#ffb020] font-bold">₹{parseInt(caseItem.amount).toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-3">
-                    <div className="inline-block px-4 py-2 bg-[#ffb020] text-black font-black font-mono uppercase">
-                      {caseItem.status}
-                    </div>
-                    <div className="flex items-center gap-2 text-destructive font-mono">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>{caseItem.daysOverdue} days overdue</span>
-                    </div>
-                    <Link href={`/case/${caseItem.id}`}>
-                      <BrutalButton variant="outline" size="sm">
-                        View Details
-                      </BrutalButton>
-                    </Link>
-                  </div>
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
+            mobileCard={(r) => (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Link href={`/case/${r.id}`} className="font-mono text-sm text-primary">{r.caseNumber}</Link>
+                  <StatusBadge status={r.status} />
                 </div>
-              </BrutalCard>
-            ))}
-          </div>
+                <p className="font-medium text-ink">{r.buyer}</p>
+                <div className="flex justify-between font-mono text-sm text-muted">
+                  <span>{formatINR0(r.principal)}</span><span>{r.daysOverdue} days overdue</span>
+                </div>
+                <p className="font-mono text-xs text-faint">Created {formatDate(r.createdAt)}</p>
+              </div>
+            )}
+          />
         )}
       </div>
-    </main>
+    </AppShell>
   );
 }
