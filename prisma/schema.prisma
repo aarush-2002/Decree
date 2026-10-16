@@ -1,3 +1,20 @@
+// ============================================================================
+// DECREE — Prisma schema (reimagined)
+//
+// Fixes over the previous schema:
+//  - User.clerkId was optional while every API route depended on it for
+//    tenant resolution → now REQUIRED.
+//  - Invoice/Client/Buyer had no org scoping beyond Client → added indexes
+//    and explicit relations; Case is now a first-class, per-organization
+//    entity (was 1-to-1 with Invoice with no owner).
+//  - Case.state values are documented against src/lib/constants.ts CASE_STATES.
+//  - RbiRateHistory was orphaned (nothing read/wrote it) → now the source of
+//    truth for rates, seeded + kept current by scripts/sync-rbi-rate.mjs.
+//  - Reminder was orphaned → now generated from case deadlines via API.
+//  - Added Document.orgId so evidence files are tenant-scoped too.
+//  - Added AuditEvent table for legal-grade traceability (who changed what).
+// ============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,46 +25,58 @@ datasource db {
 }
 
 model Organization {
-  id           String   @id @default(uuid())
-  name         String
-  type         String   
-  udyamNumber  String?
-  createdAt    DateTime @default(now())
-  
-  users        User[]
-  clients      Client[]
+  id          String   @id @default(uuid())
+  name        String
+  type        String // msme | ca_firm | law_firm
+  udyamNumber String?
+  createdAt   DateTime @default(now())
+
+  users     User[]
+  clients   Client[]
+  cases     Case[]
+  reminders Reminder[]
+
+  @@index([name])
 }
 
 model User {
-  id           String   @id @default(uuid())
-  clerkId      String?  @unique // <-- ADD THIS LINE
-  orgId        String
-  name         String
-  email        String   @unique
-  phone        String?
-  role         String   
-  
-  organization Organization @relation(fields: [orgId], references: [id])
+  id      String @id @default(uuid())
+  clerkId String @unique // REQUIRED — tenant resolution depends on this
+  orgId   String
+  name    String
+  email   String @unique
+  phone   String?
+  role    String @default("member") // admin | member
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  casesCreated Case[]       @relation("CaseCreator")
+
+  @@index([orgId])
 }
 
 model Client {
-  id             String   @id @default(uuid())
-  managingOrgId  String
-  name           String
-  udyamNumber    String?
-  gstin          String?
-  
-  managingOrg    Organization @relation(fields: [managingOrgId], references: [id])
-  invoices       Invoice[]
+  id            String @id @default(uuid())
+  managingOrgId String
+  name          String
+  udyamNumber   String?
+  gstin         String?
+
+  managingOrg Organization @relation(fields: [managingOrgId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+
+  @@unique([managingOrgId, name])
+  @@index([managingOrgId])
 }
 
 model Buyer {
-  id          String    @id @default(uuid())
-  name        String
-  gstin       String?
-  entityType  String    
-  
-  invoices    Invoice[]
+  id         String  @id @default(uuid())
+  name       String
+  gstin      String?
+  entityType String // private | psu | govt
+
+  invoices Invoice[]
+
+  @@index([name])
 }
 
 model Invoice {
@@ -59,64 +88,109 @@ model Invoice {
   deliveryDate         DateTime
   deemedAcceptanceDate DateTime?
   dueDate              DateTime
-  status               String    
-  extractedByAi        Boolean   @default(false)
-  amount               Decimal   // CHANGED FROM Float
-  
-  client      Client   @relation(fields: [clientId], references: [id])
-  buyer       Buyer    @relation(fields: [buyerId], references: [id])
-  documents   Document[]
-  case        Case?
+  status               String    @default("pending_review") // pending_review | confirmed | rejected
+  extractedByAi        Boolean   @default(false) // true only when real text-layer extraction ran
+  extractionConfidence Float?    // honest confidence score, never faked
+  amount               Decimal
+
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  buyer     Buyer      @relation(fields: [buyerId], references: [id])
+  documents Document[]
+  case      Case?
+
+  @@unique([clientId, invoiceNumber]) // prevents duplicate claims per client
+  @@index([clientId])
+  @@index([dueDate])
 }
 
 model Document {
-  id                String   @id @default(uuid())
-  invoiceId         String
-  fileUrl           String
-  fileType          String
-  uploadStatus      String   
-  extractionStatus  String   
-  
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  id               String   @id @default(uuid())
+  invoiceId        String
+  orgId            String // tenant scope for evidence files
+  fileUrl          String
+  fileName         String
+  fileType         String // pdf | image | text
+  fileSizeBytes    Int?
+  uploadStatus     String   @default("uploaded") // uploaded | failed
+  extractionStatus String   @default("not_started") // not_started | processing | needs_review | completed | failed
+  uploadedAt       DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([invoiceId])
 }
 
 model Case {
-  id                  String    @id @default(uuid())
-  invoiceId           String    @unique
-  state               String    
-  filedAt             DateTime  @default(now())
-  currentDeadlineAt   DateTime?
-  interestAccrued     Decimal   @default(0) // CHANGED FROM Float
-  principalAmount     Decimal   // CHANGED FROM Float
-  
+  id                String    @id @default(uuid())
+  orgId             String    // REQUIRED tenant scope — was missing entirely
+  invoiceId         String    @unique
+  createdById       String
+  state             String    @default("draft") // see CASE_STATES in src/lib/constants.ts
+  filedAt           DateTime?
+  currentDeadlineAt DateTime?
+  interestAccrued   Decimal   @default(0)
+  principalAmount   Decimal
+  rbiRateUsedPct    Decimal?  // rate snapshot at computation time (auditability)
+  updatedAt         DateTime  @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("CaseCreator", fields: [createdById], references: [id])
   invoice      Invoice      @relation(fields: [invoiceId], references: [id])
   events       CaseEvent[]
   reminders    Reminder[]
+
+  @@index([orgId, state])
+  @@index([currentDeadlineAt])
 }
 
 model CaseEvent {
-  id          String   @id @default(uuid())
-  caseId      String
-  fromState   String?
-  toState     String
-  occurredAt  DateTime @default(now())
-  note        String?
-  
-  case Case @relation(fields: [caseId], references: [id])
+  id         String   @id @default(uuid())
+  caseId     String
+  fromState  String?
+  toState    String
+  occurredAt DateTime @default(now())
+  note       String?
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
 }
 
 model Reminder {
-  id        String   @id @default(uuid())
-  caseId    String
-  dueAt     DateTime
-  channel   String   
-  sentAt    DateTime?
-  
-  case Case @relation(fields: [caseId], references: [id])
+  id      String    @id @default(uuid())
+  orgId   String    // tenant scope
+  caseId  String
+  dueAt   DateTime
+  channel String    @default("email") // email | sms | in_app
+  title   String
+  sentAt  DateTime?
+  doneAt  DateTime?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  case         Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, dueAt])
 }
 
 model RbiRateHistory {
   id              String   @id @default(uuid())
   effectiveFrom   DateTime @unique
-  bankRatePercent Decimal  // CHANGED FROM Float
+  bankRatePercent Decimal
+  source          String   @default("manual") // manual | rbi_reserve_bank | sync_script
+
+  @@index([effectiveFrom])
+}
+
+model AuditEvent {
+  id        String   @id @default(uuid())
+  orgId     String
+  userId    String?
+  action    String // invoice.created | case.transition | document.uploaded | ...
+  entity    String // invoice | case | document | reminder
+  entityId  String
+  detail    Json?
+  at        DateTime @default(now())
+
+  @@index([orgId, at])
 }
