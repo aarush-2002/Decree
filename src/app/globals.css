@@ -1,50 +1,311 @@
-   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700;800;900&display=swap');
-   @import "tailwindcss";
-   
-/* Tailwind CSS v4 theme directive; keep this block for theme token generation. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+/* ============================================================================
+   DECREE — Design tokens ("Modern legal editorial")
+   Warm paper background, deep ink-green primary (committed), single brass accent.
+   Every surface, border and type style below is built from these tokens only.
+   ========================================================================== */
+
 @theme {
-  --color-base: #0a0d1c;
-  --color-base-light: #1a1f3a;
-  --color-primary: #ffb020;
-  --color-primary-dark: #cc8d00;
-  --color-secondary: #00d9b5;
-  --color-secondary-dark: #00ad91;
-  --color-destructive: #ff0040;
+  /* Surfaces */
+  --color-canvas: #faf8f4;          /* warm off-white — never pure white */
+  --color-surface: #fffdf9;         /* raised card surface */
+  --color-ink: #14161a;             /* primary text */
+  --color-muted: #6b6760;           /* secondary text (warm grey) */
+  --color-faint: #98938a;           /* tertiary / placeholders */
 
-  --font-display: 'Space Grotesk', monospace;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Primary — committed to deep forest green */
+  --color-primary: #14352a;
+  --color-primary-deep: #0c211a;
+  --color-primary-soft: #e7ede9;    /* tint for chips / hover washes */
 
-  --shadow-brutal: 6px 6px 0px 0px rgba(0,0,0,1);
-  --shadow-brutal-hover: 8px 8px 0px 0px rgba(0,0,0,1);
-  --shadow-brutal-active: 2px 2px 0px 0px rgba(0,0,0,1);
+  /* Accent — muted brass, used sparingly */
+  --color-brass: #b08a3e;
+  --color-brass-soft: #f2ead9;
+
+  /* Hairlines */
+  --color-line: #e6e1d8;
+  --color-line-strong: #d5cec1;
+
+  /* Status (desaturated) */
+  --color-pending: #8a6d1f;   --color-pending-bg: #f6efdc;
+  --color-calculated: #4a6470; --color-calculated-bg: #e6edf0;
+  --color-filed: #2f6b4f;     --color-filed-bg: #e2eee7;
+  --color-danger: #9a3b2e;    --color-danger-bg: #f5e5e1;
+
+  /* Dark mode accents (warm charcoal, never black) */
+  --color-night: #121311;
+  --color-night-surface: #1b1d1a;
+  --color-night-line: #2e312c;
+
+  /* Type */
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-card: 12px;
+  --radius-control: 8px;
+
+  /* Soft shadow — reserved for floating elements only */
+  --shadow-float: 0 12px 32px -12px rgb(20 22 26 / 0.18), 0 2px 6px -2px rgb(20 22 26 / 0.06);
+  --shadow-lift: 0 6px 16px -8px rgb(20 22 26 / 0.14);
+
+  /* Motion */
+  --ease-reveal: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    font-family: var(--font-body);
-    background-color: white;
-    color: var(--color-base);
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+  }
+
+  /* Tabular figures everywhere numbers matter */
+  .tnum, td, .amount, [data-count] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visible focus rings — WCAG */
+  :focus-visible {
+    outline: 2px solid var(--color-brass);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-brass-soft);
+    color: var(--color-primary-deep);
+  }
+
+  /* Fine paper grain at ~3.5% opacity — fixed overlay, pointer-events none */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Masked line reveals need overflow-hidden wrappers */
+  .mask-line { overflow: hidden; display: block; }
+  .mask-line > * { display: block; will-change: transform; }
+
+  /* Underline that draws in from the left */
+  .link-draw { position: relative; text-decoration: none; }
+  .link-draw::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: -2px;
+    width: 100%; height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s var(--ease-reveal);
+  }
+  .link-draw:hover::after, .link-draw:focus-visible::after { transform: scaleX(1); }
+
+  /* Stamp badge (FILED / READY TO FILE) */
+  .stamp {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 2px solid var(--color-filed);
+    color: var(--color-filed);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    transform: rotate(-4deg);
+    box-shadow: inset 0 0 0 1px rgb(47 107 79 / 0.25);
+    opacity: 0.92;
+  }
+
+  /* Handwritten-style annotation (falls back to italic serif) */
+  .annotation {
+    font-style: italic;
+    font-family: var(--font-serif);
+    color: var(--color-brass);
   }
 }
 
-@layer utilities {
-  .brutal-card {
-    @apply bg-white border-4 border-black shadow-brutal transition-all duration-200;
+@layer components {
+  /* Scroll reveal primitive (works without JS libs too) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s var(--ease-reveal), transform 0.7s var(--ease-reveal);
   }
-  .brutal-card:hover {
-    @apply -translate-x-0.5 -translate-y-0.5 shadow-brutal-hover;
+  .reveal.is-in { opacity: 1; transform: none; }
+
+  /* Hairline divider that draws left→right when in view */
+  .rule-draw {
+    height: 1px;
+    background: var(--color-line-strong);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.9s var(--ease-reveal);
   }
-  .brutal-button {
-    @apply font-display font-black uppercase tracking-tight border-4 border-black shadow-brutal transition-all duration-100 cursor-pointer inline-flex items-center justify-center;
+  .rule-draw.is-in { transform: scaleX(1); }
+
+  /* Marquee track */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 3rem;
   }
-  .brutal-button:active {
-    @apply translate-x-1 translate-y-1 shadow-brutal-active;
+
+  /* Skeleton shimmer — calm, not flashy */
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-canvas) 25%, #efeae1 50%, var(--color-canvas) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-x 1.6s ease-in-out infinite;
+    border-radius: 6px;
   }
-  .brutal-input {
-    @apply font-mono font-bold border-[3px] border-black outline-none transition-all duration-100 w-full p-4 bg-white;
+  @keyframes skeleton-x {
+    to { background-position: -200% 0; }
   }
-  .brutal-input:focus {
-    @apply border-primary shadow-[4px_4px_0px_0px_#ffb020] -translate-x-0.5 -translate-y-0.5;
+
+  /* Custom cursor (desktop, non-reduced-motion only) */
+  .cursor-dot {
+    position: fixed; top: 0; left: 0; z-index: 90;
+    width: 8px; height: 8px; border-radius: 9999px;
+    background: var(--color-brass);
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    transition: width 0.2s var(--ease-reveal), height 0.2s var(--ease-reveal), background 0.2s;
   }
+  .cursor-dot[data-active='true'] {
+    width: 44px; height: 44px;
+    background: transparent;
+    border: 1.5px solid var(--color-brass);
+  }
+  .has-cursor, .has-cursor a, .has-cursor button { cursor: none; }
+
+  /* Fill-from-below CTA hover */
+  .btn-fill {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-fill::before {
+    content: '';
+    position: absolute; inset: 0; z-index: -1;
+    background: var(--color-brass);
+    transform: translateY(101%);
+    transition: transform 0.3s var(--ease-reveal);
+  }
+  .btn-fill:hover::before, .btn-fill:focus-visible::before { transform: translateY(0); }
+}
+
+/* Respect prefers-reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+  .rule-draw { transform: scaleX(1); }
+  .cursor-dot { display: none !important; }
+}
+
+/* ============================================================================
+   DECREE — Dark mode ("warm charcoal, never black") via class strategy */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-canvas: #121311;
+  --color-surface: #1b1d1a;
+  --color-ink: #ece7dd;
+  --color-muted: #a8a294;
+  --color-faint: #7a756a;
+  --color-primary: #cfe3d6;        /* inverted: light green reads on charcoal */
+  --color-primary-deep: #eaf5ee;
+  --color-primary-soft: #22302a;
+  --color-brass: #cfa657;
+  --color-brass-soft: #2c2617;
+  --color-line: #2e312c;
+  --color-line-strong: #3c4038;
+  --color-pending: #d8bc6a;      --color-pending-bg: #2c2617;
+  --color-calculated: #9db6c2;   --color-calculated-bg: #1e282d;
+  --color-filed: #7fbf98;        --color-filed-bg: #1c2a22;
+  --color-danger: #d98a7b;       --color-danger-bg: #2e1d19;
+  --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --shadow-lift: 0 6px 16px -8px rgb(0 0 0 / 0.4);
+}
+.dark body { background-color: var(--color-canvas); color: var(--color-ink); }
+.dark .grain::after { opacity: 0.05; filter: invert(1); }
+.dark ::selection { background: #3a351f; }
+
+/* ---- Marketing landing: hero tilt + scroll cue ---- */
+.hero-tilt { transition: transform 0.2s ease-out; will-change: transform; }
+.scroll-cue { display: flex; align-items: center; gap: 12px; color: var(--color-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+.scroll-cue-line { width: 56px; height: 1px; background: var(--color-line-strong); position: relative; overflow: hidden; }
+.scroll-cue-line::after { content: ''; position: absolute; inset: 0; background: var(--color-brass); animation: cue-slide 2.2s var(--ease-reveal) infinite; }
+@keyframes cue-slide { 0% { transform: translateX(-100%);} 60%,100% { transform: translateX(100%);} }
+
+/* ---- Pinned "How it works" (desktop scrub, mobile stacked) ---- */
+.how-sticky { position: relative; }
+@media (min-width: 1024px) {
+  .how-section { height: 300vh; }
+  .how-track { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; overflow: hidden; }
+  .how-steps { display: grid; grid-template-columns: repeat(3, 100%); width: 300%; transition: none; }
+  .how-step { min-height: 70vh; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 3rem; padding-right: 4rem; }
+  .how-progress { position: absolute; left: 0; bottom: 3rem; width: 100%; max-width: 1200px; height: 2px; background: var(--color-line); margin: 0 auto; }
+  .how-progress-fill { display: block; height: 100%; width: 100%; background: var(--color-brass); transform-origin: left; transform: scaleX(var(--p, 0)); }
+}
+@media (max-width: 1023px) {
+  .how-steps { display: flex; flex-direction: column; gap: 6rem; }
+  .how-step { display: flex; flex-direction: column; gap: 2rem; }
+  .how-progress { display: none; }
+}
+.step-num { font-family: var(--font-serif); font-style: italic; font-size: 2.5rem; color: var(--color-brass); line-height: 1; }
+.scan-wrap { position: relative; }
+.scan-line { position: absolute; left: 4%; right: 4%; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--color-brass), transparent); opacity: 0; }
+.how-step.is-active .scan-line { opacity: 1; animation: scan-sweep 2.4s var(--ease-move, cubic-bezier(0.65,0,0.35,1)) infinite; }
+@keyframes scan-sweep { 0% { transform: translateY(0);} 50% { transform: translateY(240px);} 100% { transform: translateY(0);} }
+.packet-wrap { display: flex; }
+.packet { display: flex; flex-direction: column; gap: 0.75rem; border: 1px solid var(--color-line-strong); background: var(--color-surface); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-float); }
+
+/* ---- Bento feature cards ---- */
+.feature-card { transition: transform 0.2s ease-out, border-color 0.2s ease-out; }
+.feature-card:hover { transform: translateY(-4px); border-color: var(--color-brass); }
+.dot-matrix { display: grid; grid-template-columns: repeat(14, 6px); gap: 6px; }
+.dot-matrix .dot { width: 4px; height: 4px; border-radius: 9999px; background: var(--color-primary-soft); animation: dot-pop 2.8s ease-in-out infinite; }
+@keyframes dot-pop { 0%, 100% { background: var(--color-primary-soft); } 50% { background: var(--color-brass); } }
+
+/* ---- Marquee ---- */
+.marquee { animation: marquee-x 36s linear infinite; }
+@keyframes marquee-x { to { transform: translateX(-50%); } }
+
+/* ---- Final CTA band: wipes to deep green on enter ---- */
+.cta-band { background: var(--color-canvas); transition: background-color 0.8s var(--ease-reveal); }
+.cta-band.is-green { background: var(--color-primary-deep); }
+
+/* ---- Invoice mockup (landing decoration) ---- */
+.inv-doc { border: 1px solid var(--color-line-strong); background: var(--color-surface); border-radius: 10px; box-shadow: var(--shadow-float); padding: 1.25rem; font-size: 12px; }
+.inv-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-bottom: 1px dashed var(--color-line); }
+.inv-hl { color: var(--color-ink); background: var(--color-brass-soft); border-radius: 4px; padding: 0 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee { animation: none; }
+  .scroll-cue-line::after, .how-step.is-active .scan-line { animation: none; opacity: 1; }
+  .dot-matrix .dot { animation: none; }
+  .cta-band { transition: none; }
 }
